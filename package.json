@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "concurrently": "^9.1.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
@@ -9,9 +10,10 @@
   "name": "be-nodejs",
   "version": "1.0.0",
   "main": "app.js",
-  "devDependencies": {},
   "scripts": {
-    "start": "nodemon app"
+    "start": "nodemon app",
+    "start:client": "cd ../fe-react-deploy && npm start",
+    "dev": "npx concurrently \"npm run start\" \"npm run start:client\""
   },
   "keywords": [],
   "author": "",
