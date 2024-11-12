@@ -4,7 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const Table = require("./models/Table");
-
+const { v4: uuid } = require("uuid");
 const port = process.env.PORT;
 const app = express();
 app.use(cors({ origin: "http://localhost:3000" }));
@@ -21,16 +21,27 @@ app.get("/hi", (req, res) => {
 });
 
 app.post("/api/create", async (req, res) => {
-  //회원 가입 시 필요한 정보를 클라이언트에서
-  //가져오면 db에 넣기
-
-  const table = new Table(req.body);
+  const { title, dates, startHour, endHour, banedCells } = req.body;
+  const meetingId = uuid();
+  const table = new Table({
+    title,
+    meetingId,
+    dates,
+    startHour,
+    endHour,
+    banedCells,
+  });
   try {
     await table.save();
-    res.status(200).json({ success: true });
+    res.status(200).json({
+      success: true,
+      code: 200,
+      message: "테이블 등록 성공",
+      data: { meetingId: meetingId },
+    });
   } catch (err) {
-    console.error("Registration error:", err);
-    res.status(400).json({ success: false, err: err });
+    console.error("/api/create error:", err);
+    res.status(400).json({ success: false, err: err, code: 400 });
   }
 });
 

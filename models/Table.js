@@ -6,7 +6,7 @@ const tableSchema = new mongoose.Schema({
     required: true,
     maxlength: 50,
   },
-  meetingUrl: {
+  meetingId: {
     type: String,
     required: true,
   },
@@ -16,15 +16,13 @@ const tableSchema = new mongoose.Schema({
       required: true,
     },
   ],
-  timeRange: {
-    startHour: {
-      type: String,
-      required: true,
-    },
-    endHour: {
-      type: String,
-      required: true,
-    },
+  startHour: {
+    type: String,
+    required: true,
+  },
+  endHour: {
+    type: String,
+    required: true,
   },
   banedCells: [
     {
