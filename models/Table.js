@@ -10,6 +10,7 @@ const tableSchema = new mongoose.Schema(
     tableId: {
       type: String,
       required: true,
+      unique: true,
     },
     dates: [
       {
