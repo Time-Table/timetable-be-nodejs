@@ -22,26 +22,51 @@ app.get("/hi", (req, res) => {
 
 app.post("/api/create", async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
-  const meetingId = uuid();
+  const tableId = uuid();
   const table = new Table({
     title,
-    meetingId,
+    tableId,
     dates,
     startHour,
     endHour,
     banedCells,
   });
   try {
-    await table.save();
+    const savedTable = await table.save();
     res.status(200).json({
       success: true,
       code: 200,
       message: "테이블 등록 성공",
-      data: { meetingId: meetingId },
+      data: { tableId: savedTable.tableId },
     });
   } catch (err) {
     console.error("/api/create error:", err);
     res.status(400).json({ success: false, err: err, code: 400 });
+  }
+});
+
+app.get("/api/tableInfo", async (req, res) => {
+  const { tableId } = req.query;
+
+  if (!tableId) {
+    return res.status(400).json({ success: false, message: "TableId를 받지 못했습니다." });
+  }
+
+  try {
+    const tableData = await Table.findOne({ tableId: tableId });
+
+    if (!tableData) {
+      return res.status(404).json({
+        success: false,
+        message: "테이블을 찾을 수 없습니다.",
+        queriedId: tableId,
+      });
+    }
+
+    res.status(200).json({ success: true, data: tableData });
+  } catch (error) {
+    console.error("Error fetching table:", error);
+    res.status(500).json({ success: false, message: "서버 오류가 발생했습니다.", error });
   }
 });
 
