@@ -14,7 +14,7 @@ const tableSchema = new mongoose.Schema(
     },
     dates: [
       {
-        type: Date,
+        type: String,
         required: true,
       },
     ],

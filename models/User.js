@@ -9,7 +9,6 @@ const userSchema = new mongoose.Schema({
   name: {
     type: String,
     required: true,
-    unique: true,
     maxlength: 15,
   },
   password: {
@@ -18,6 +17,8 @@ const userSchema = new mongoose.Schema({
     maxlength: 15,
   },
 });
+
+userSchema.index({ tableId: 1, name: 1 }, { unique: true });
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;

@@ -90,6 +90,13 @@ app.post("/api/join", async (req, res) => {
         queriedId: tableId,
       });
     }
+    const userData = await User.findOne({ tableId, name, password });
+    if (userData)
+      return res.status(201).json({
+        success: true,
+        data: userData,
+        message: "해당 유저로 로그인됩니다.",
+      });
 
     const user = new User({
       tableId,
@@ -112,7 +119,7 @@ app.post("/api/join", async (req, res) => {
       return res.status(400).json({
         success: false,
         code: 400,
-        message: "중복된 이름입니다. 다른 이름을 사용하세요.",
+        message: "이미 사용 중인 이름입니다. 다른 이름을 선택하세요.",
       });
     }
 
@@ -142,7 +149,7 @@ app.get("/api/userInfo", async (req, res) => {
       return res.status(201).json({
         success: true,
         code: 201,
-        message: "새로운 유저 등록이 가능합니다.",
+        message: "존재하지 않는 유저입니다.",
       });
     }
 
@@ -158,7 +165,7 @@ app.get("/api/userInfo", async (req, res) => {
       success: true,
       code: 200,
       data: userData,
-      message: "유저가 존재합니다.",
+      message: "이미 사용 중인 이름입니다. 다른 이름을 선택하세요.",
     });
   } catch (error) {
     console.error("Error /api/userInfo:", error);
