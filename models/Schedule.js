@@ -1,32 +1,15 @@
 const mongoose = require("mongoose");
 
-const scheduleSchema = new mongoose.Schema({
-  tableId: {
-    type: String,
-    ref: "Table",
-    required: true,
-  },
-  membersSchedule: {
-    count: {
-      type: Number,
+const scheduleSchema = new mongoose.Schema(
+  {
+    tableId: {
+      type: String,
       required: true,
     },
-    users: [
-      {
-        name: {
-          type: String,
-          required: true,
-        },
-        availableTimes: {
-          type: [String], // 가능한 시간대
-          required: true,
-        },
-      },
-    ],
     timeInfo: [
       {
         time: {
-          type: String, // 시간 정보 예: "2024-11-07-13:00"
+          type: String,
           required: true,
         },
         colorNumber: {
@@ -40,7 +23,8 @@ const scheduleSchema = new mongoose.Schema({
       },
     ],
   },
-});
+  { timestamps: true }
+);
 
 const Schedule = mongoose.model("Schedule", scheduleSchema);
 module.exports = Schedule;

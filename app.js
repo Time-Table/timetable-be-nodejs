@@ -72,7 +72,7 @@ app.get("/api/tableInfo", async (req, res) => {
 });
 
 app.post("/api/join", async (req, res) => {
-  const { tableId, name, password } = req.body;
+  const { tableId, name, password, availableTimes } = req.body;
 
   if (!tableId || !name || !password) {
     return res.status(400).json({
@@ -102,6 +102,7 @@ app.post("/api/join", async (req, res) => {
       tableId,
       name,
       password,
+      availableTimes,
     });
 
     await user.save();
@@ -134,7 +135,6 @@ app.post("/api/join", async (req, res) => {
 
 app.get("/api/userInfo", async (req, res) => {
   const { tableId, name, password } = req.query;
-
   if (!tableId || !name || !password) {
     return res.status(400).json({
       success: false,
@@ -216,6 +216,47 @@ app.delete("/api/deleteUser", async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting user:", error);
+    res.status(500).json({
+      success: false,
+      message: "서버 오류가 발생했습니다.",
+      error,
+    });
+  }
+});
+
+app.post("/api/addSchedule", async (req, res) => {
+  const { tableId, name, availableTimes } = req.body;
+
+  // 필수 데이터 검증
+  if (!tableId || !name || !Array.isArray(availableTimes)) {
+    return res.status(400).json({
+      success: false,
+      message: "필수 데이터를 올바르게 입력하세요. (tableId, name, availableTimes)",
+    });
+  }
+
+  try {
+    // 유저 조회
+    const user = await User.findOne({ tableId, name });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "유저를 찾을 수 없습니다.",
+      });
+    }
+
+    // 스케줄 업데이트 (기존 배열에 추가)
+    user.availableTimes = Array.from(new Set([...user.availableTimes, ...availableTimes]));
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "스케줄이 성공적으로 업데이트되었습니다.",
+      data: user.availableTimes,
+    });
+  } catch (error) {
+    console.error("Error updating schedule:", error);
     res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
