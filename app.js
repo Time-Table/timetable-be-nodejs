@@ -111,7 +111,7 @@ app.post("/api/join", async (req, res) => {
       success: true,
       code: 200,
       message: "유저 등록 성공",
-      data: { name },
+      data: { name: user.name, availableTimes: user.availableTimes },
     });
   } catch (error) {
     console.error("/api/join error:", error);
@@ -245,8 +245,7 @@ app.post("/api/addSchedule", async (req, res) => {
       });
     }
 
-    // 스케줄 업데이트 (기존 배열에 추가)
-    user.availableTimes = Array.from(new Set([...user.availableTimes, ...availableTimes]));
+    user.availableTimes = Array.from(new Set([...availableTimes]));
 
     await user.save();
 
@@ -257,6 +256,42 @@ app.post("/api/addSchedule", async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating schedule:", error);
+    res.status(500).json({
+      success: false,
+      message: "서버 오류가 발생했습니다.",
+      error,
+    });
+  }
+});
+
+app.get("/api/users", async (req, res) => {
+  const { tableId } = req.query;
+
+  if (!tableId) {
+    return res.status(400).json({
+      success: false,
+      message: "tableId가 제공되지 않았습니다.",
+    });
+  }
+
+  try {
+    const users = await User.find({ tableId }, "name availableTimes");
+
+    if (!users || users.length === 0) {
+      return res.status(201).json({
+        success: true,
+        message: "해당 테이블에 유저가 존재하지 않습니다.",
+        code: 201,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: users,
+      code: 200,
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
     res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
