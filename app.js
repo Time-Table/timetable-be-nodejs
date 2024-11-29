@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 const Table = require("./models/Table");
 const { v4: uuid } = require("uuid");
 const User = require("./models/User");
+const Schedule = require("./models/schedule");
 const port = process.env.PORT;
 const app = express();
 app.use(cors({ origin: "http://localhost:3000" }));
@@ -236,7 +237,7 @@ app.post("/api/addSchedule", async (req, res) => {
   }
 
   try {
-    // 유저 조회
+    // 유저 데이터 업데이트
     const user = await User.findOne({ tableId, name });
     if (!user) {
       return res.status(404).json({
@@ -246,13 +247,59 @@ app.post("/api/addSchedule", async (req, res) => {
     }
 
     user.availableTimes = Array.from(new Set([...availableTimes]));
-
     await user.save();
+
+    const users = await User.find({ tableId });
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No users found for the given TableId.",
+      });
+    }
+
+    const timeCounts = {};
+    users.forEach((user) => {
+      user.availableTimes.forEach((time) => {
+        timeCounts[time] = (timeCounts[time] || 0) + 1;
+      });
+    });
+
+    const totalUsers = users.length;
+
+    const timeInfo = Object.entries(timeCounts).map(([time, count]) => {
+      const percentage = (count / totalUsers) * 100;
+      let colorNumber = 20;
+
+      if (percentage > 80) {
+        colorNumber = 100;
+      } else if (percentage > 60) {
+        colorNumber = 80;
+      } else if (percentage > 40) {
+        colorNumber = 60;
+      } else if (percentage > 20) {
+        colorNumber = 40;
+      }
+
+      return {
+        time,
+        colorNumber,
+        rank: count,
+      };
+    });
+
+    const existingSchedule = await Schedule.findOne({ tableId });
+    if (existingSchedule) {
+      existingSchedule.timeInfo = timeInfo;
+      await existingSchedule.save();
+    } else {
+      await Schedule.create({ tableId, timeInfo });
+    }
 
     res.status(200).json({
       success: true,
       message: "스케줄이 성공적으로 업데이트되었습니다.",
-      data: user.availableTimes,
+      data: { userAvailableTimes: user.availableTimes, scheduleTimeInfo: timeInfo },
     });
   } catch (error) {
     console.error("Error updating schedule:", error);
@@ -295,6 +342,111 @@ app.get("/api/users", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
+      error,
+    });
+  }
+});
+
+app.post("/api/generateSchedule", async (req, res) => {
+  const { tableId } = req.body;
+
+  if (!tableId) {
+    return res.status(400).json({
+      success: false,
+      message: "TableId is required.",
+    });
+  }
+
+  try {
+    const users = await User.find({ tableId });
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No users found for the given TableId.",
+      });
+    }
+    const timeCounts = {};
+    users.forEach((user) => {
+      user.availableTimes.forEach((time) => {
+        timeCounts[time] = (timeCounts[time] || 0) + 1;
+      });
+    });
+
+    const totalUsers = users.length;
+
+    const timeInfo = Object.entries(timeCounts).map(([time, count]) => {
+      const percentage = (count / totalUsers) * 100;
+      let colorNumber = 20;
+
+      if (percentage > 80) {
+        colorNumber = 100;
+      } else if (percentage > 60) {
+        colorNumber = 80;
+      } else if (percentage > 40) {
+        colorNumber = 60;
+      } else if (percentage > 20) {
+        colorNumber = 40;
+      }
+
+      return {
+        time,
+        colorNumber,
+      };
+    });
+
+    const existingSchedule = await Schedule.findOne({ tableId });
+    if (existingSchedule) {
+      existingSchedule.timeInfo = timeInfo;
+      await existingSchedule.save();
+    } else {
+      await Schedule.create({ tableId, timeInfo });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Schedule generated successfully.",
+      data: timeInfo,
+    });
+  } catch (error) {
+    console.error("Error generating schedule:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while generating the schedule.",
+      error,
+    });
+  }
+});
+
+app.get("/api/getSchedule", async (req, res) => {
+  const { tableId } = req.query;
+
+  if (!tableId) {
+    return res.status(400).json({
+      success: false,
+      message: "TableId is required.",
+    });
+  }
+
+  try {
+    const schedule = await Schedule.findOne({ tableId });
+
+    if (!schedule) {
+      return res.status(404).json({
+        success: false,
+        message: "No schedule found for the given TableId.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: schedule.timeInfo,
+    });
+  } catch (error) {
+    console.error("Error fetching schedule:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching the schedule.",
       error,
     });
   }
