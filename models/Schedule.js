@@ -16,10 +16,16 @@ const scheduleSchema = new mongoose.Schema(
           type: Number,
           required: true,
         },
-        rank: {
+        count: {
           type: Number,
           required: true,
         },
+        members: [
+          {
+            type: String,
+            required: true,
+          },
+        ],
       },
     ],
   },

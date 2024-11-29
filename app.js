@@ -224,11 +224,9 @@ app.delete("/api/deleteUser", async (req, res) => {
     });
   }
 });
-
 app.post("/api/addSchedule", async (req, res) => {
   const { tableId, name, availableTimes } = req.body;
 
-  // 필수 데이터 검증
   if (!tableId || !name || !Array.isArray(availableTimes)) {
     return res.status(400).json({
       success: false,
@@ -237,7 +235,6 @@ app.post("/api/addSchedule", async (req, res) => {
   }
 
   try {
-    // 유저 데이터 업데이트
     const user = await User.findOne({ tableId, name });
     if (!user) {
       return res.status(404).json({
@@ -258,16 +255,21 @@ app.post("/api/addSchedule", async (req, res) => {
       });
     }
 
-    const timeCounts = {};
+    const timeMembersMap = {};
+
     users.forEach((user) => {
       user.availableTimes.forEach((time) => {
-        timeCounts[time] = (timeCounts[time] || 0) + 1;
+        if (!timeMembersMap[time]) {
+          timeMembersMap[time] = [];
+        }
+        timeMembersMap[time].push(user.name);
       });
     });
 
     const totalUsers = users.length;
 
-    const timeInfo = Object.entries(timeCounts).map(([time, count]) => {
+    const timeInfo = Object.entries(timeMembersMap).map(([time, members]) => {
+      const count = members.length;
       const percentage = (count / totalUsers) * 100;
       let colorNumber = 20;
 
@@ -284,7 +286,8 @@ app.post("/api/addSchedule", async (req, res) => {
       return {
         time,
         colorNumber,
-        rank: count,
+        count: count,
+        members,
       };
     });
 
@@ -438,6 +441,7 @@ app.get("/api/getSchedule", async (req, res) => {
       });
     }
 
+    // timeInfo에 저장된 members를 그대로 반환
     return res.status(200).json({
       success: true,
       data: schedule.timeInfo,
