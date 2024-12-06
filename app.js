@@ -453,9 +453,9 @@ app.get("/api/getSchedule", async (req, res) => {
     const schedule = await Schedule.findOne({ tableId });
 
     if (!schedule) {
-      return res.status(404).json({
-        success: false,
-        message: "No schedule found for the given TableId.",
+      return res.status(201).json({
+        success: true,
+        message: "등록된 스케줄이 없습니다.",
       });
     }
 
