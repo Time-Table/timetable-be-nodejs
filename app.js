@@ -170,7 +170,7 @@ app.get("/api/userInfo", async (req, res) => {
         availableTimes: userData.availableTimes,
         name: userData.name,
       },
-      message: "이미 사용 중인 이름입니다. 다른 이름을 선택하세요.",
+      message: "?",
     });
   } catch (error) {
     console.error("Error /api/userInfo:", error);
