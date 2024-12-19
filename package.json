@@ -14,7 +14,8 @@
   "scripts": {
     "start": "nodemon app",
     "start:client": "cd ../fe-react-deploy && npm start",
-    "dev": "npx concurrently \"npm run start\" \"npm run start:client\""
+    "dev": "npx concurrently \"npm run start\" \"npm run start:client\"",
+    "node": "node app.js"
   },
   "keywords": [],
   "author": "",
