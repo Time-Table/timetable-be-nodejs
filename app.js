@@ -170,7 +170,6 @@ app.get("/api/userInfo", async (req, res) => {
         availableTimes: userData.availableTimes,
         name: userData.name,
       },
-      message: "?",
     });
   } catch (error) {
     console.error("Error /api/userInfo:", error);
