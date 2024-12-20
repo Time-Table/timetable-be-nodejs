@@ -12,10 +12,10 @@
   "version": "1.0.0",
   "main": "app.js",
   "scripts": {
-    "start": "nodemon app",
+    "start": "node app.js",
     "start:client": "cd ../fe-react-deploy && npm start",
-    "dev": "npx concurrently \"npm run start\" \"npm run start:client\"",
-    "node": "node app.js"
+    "dev": "npx concurrently \"npm run node\" \"npm run start:client\"",
+    "node": "nodemon app"
   },
   "keywords": [],
   "author": "",
