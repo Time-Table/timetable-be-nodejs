@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 const Table = require("./models/Table");
 const Chat = require("./models/Chat");
 const User = require("./models/User");
-const Schedule = require("./models/schedule");
+const Schedule = require("./models/Schedule");
 const { v4: uuid } = require("uuid");
 
 const port = process.env.PORT;
