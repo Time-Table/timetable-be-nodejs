@@ -210,17 +210,34 @@ app.delete("/api/deleteUser", async (req, res) => {
 
     const { availableTimes } = user;
     await User.deleteOne({ tableId, name });
+
     const schedule = await Schedule.findOne({ tableId });
     if (schedule) {
+      const totalUsers = await User.countDocuments({ tableId });
       const updatedTimeInfo = schedule.timeInfo
         .map((timeEntry) => {
           if (availableTimes.includes(timeEntry.time)) {
             const updatedMembers = timeEntry.members.filter((member) => member !== name);
+            const count = updatedMembers.length;
+
+            let colorNumber = 20;
+            const percentage = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
+
+            if (percentage > 80) {
+              colorNumber = 100;
+            } else if (percentage > 60) {
+              colorNumber = 80;
+            } else if (percentage > 40) {
+              colorNumber = 60;
+            } else if (percentage > 20) {
+              colorNumber = 40;
+            }
 
             return {
               ...timeEntry,
               members: updatedMembers,
-              count: updatedMembers.length,
+              count,
+              colorNumber,
             };
           }
           return timeEntry;
