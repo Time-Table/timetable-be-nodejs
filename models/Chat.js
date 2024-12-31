@@ -22,6 +22,10 @@ const chatSchema = new mongoose.Schema({
       },
     },
   ],
+  expiresAfter: {
+    type: Date,
+    required: false,
+  },
 });
 
 const Chat = mongoose.model("Chat", chatSchema);

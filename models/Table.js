@@ -32,6 +32,10 @@ const tableSchema = new mongoose.Schema(
         required: false,
       },
     ],
+    expiresAfter: {
+      type: Date,
+      required: false,
+    },
   },
   { timestamps: true } // 영국 시간 기준
 );
