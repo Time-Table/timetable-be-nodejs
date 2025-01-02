@@ -19,10 +19,6 @@ mongoose
   .then(() => console.log(`mongoDB connected!`))
   .catch((err) => console.log(err));
 
-app.get("/hi", (req, res) => {
-  return res.status(200).json({ hi: "Hello World~!" });
-});
-
 app.post("/api/create", async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
   const tableId = uuid();
@@ -50,7 +46,7 @@ app.post("/api/create", async (req, res) => {
 
 app.get("/api/tableInfo", async (req, res) => {
   const { tableId } = req.query;
-  const expiresAfter = new Date(Date.now() + 100000 * 60 * 1000); // 현재 시간 + 69일 10시간
+  const expiresAfter = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 현재 시간 + 100일
 
   if (!tableId) {
     return res.status(400).json({ success: false, message: "TableId를 받지 못했습니다." });
