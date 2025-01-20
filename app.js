@@ -10,7 +10,7 @@ const { v4: uuid } = require("uuid");
 
 const port = process.env.PORT;
 const app = express();
-app.use(cors({ origin: process.env.CORS }));
+app.use(cors({ origin: [process.env.CORS, "https://www.timetable2.com"] }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
