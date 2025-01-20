@@ -9,10 +9,12 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      maxlength: 15,
     },
     password: {
       type: String,
       required: true,
+      maxlength: 15,
     },
     availableTimes: [
       {
@@ -20,6 +22,10 @@ const userSchema = new mongoose.Schema(
         required: false,
       },
     ],
+    expiresAfter: {
+      type: Date,
+      required: false,
+    },
   },
   { timestamps: true }
 );

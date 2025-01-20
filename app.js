@@ -19,10 +19,6 @@ mongoose
   .then(() => console.log(`mongoDB connected!`))
   .catch((err) => console.log(err));
 
-app.get("/hi", (req, res) => {
-  return res.status(200).json({ hi: "Hello World~!" });
-});
-
 app.post("/api/create", async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
   const tableId = uuid();
@@ -50,21 +46,47 @@ app.post("/api/create", async (req, res) => {
 
 app.get("/api/tableInfo", async (req, res) => {
   const { tableId } = req.query;
+  const expiresAfter = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 현재 시간 + 100일
 
   if (!tableId) {
     return res.status(400).json({ success: false, message: "TableId를 받지 못했습니다." });
   }
 
-  try {
-    const tableData = await Table.findOne({ tableId: tableId });
+  const userData = await User.findOne({ tableId: tableId });
+  const scheduleData = await Schedule.findOne({ tableId: tableId });
+  const chatData = await Chat.findOne({ tableId: tableId });
+  const tableData = await Table.findOne({ tableId: tableId });
 
-    if (!tableData) {
+  try {
+    if (userData) {
+      userData.expiresAfter = expiresAfter;
+
+      await userData.save();
+    }
+    if (scheduleData) {
+      scheduleData.expiresAfter = expiresAfter;
+      await scheduleData.save();
+    }
+    if (chatData) {
+      chatData.expiresAfter = expiresAfter;
+      await chatData.save();
+    }
+
+    if (
+      !tableData
+      // || !userData || !scheduleData || !chatData
+    ) {
       return res.status(404).json({
         success: false,
         message: "테이블을 찾을 수 없습니다.",
         queriedId: tableId,
       });
     }
+
+    // expiresAfter 갱신
+    tableData.expiresAfter = expiresAfter;
+
+    await tableData.save();
 
     res.status(200).json({ success: true, data: tableData });
   } catch (error) {

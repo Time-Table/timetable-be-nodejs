@@ -15,6 +15,7 @@ const chatSchema = new mongoose.Schema({
       message: {
         type: String,
         required: true,
+        maxlength: 500,
       },
       timestamp: {
         type: Date,
@@ -22,6 +23,10 @@ const chatSchema = new mongoose.Schema({
       },
     },
   ],
+  expiresAfter: {
+    type: Date,
+    required: false,
+  },
 });
 
 const Chat = mongoose.model("Chat", chatSchema);
