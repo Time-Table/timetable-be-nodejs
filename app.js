@@ -1,4 +1,7 @@
+require("./instrument.js");
 require("dotenv").config();
+const Sentry = require("@sentry/node");
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -10,6 +13,7 @@ const { v4: uuid } = require("uuid");
 
 const port = process.env.PORT;
 const app = express();
+
 app.use(cors({ origin: process.env.CORS }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -18,6 +22,15 @@ mongoose
   .connect(process.env.DB_KEY)
   .then(() => console.log(`mongoDB connected!`))
   .catch((err) => console.log(err));
+
+app.get("/", async (req, res) => {
+  return res.send("hi");
+});
+
+app.get("/debug-sentry", function mainHandler(req, res) {
+  Sentry.captureException("here");
+  throw new Error("My! first Sentry error!");
+});
 
 app.post("/api/create", async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
@@ -600,6 +613,12 @@ app.get("/api/getChating", async (req, res) => {
       error,
     });
   }
+});
+
+Sentry.setupExpressErrorHandler(app);
+app.use(function onError(err, req, res, next) {
+  res.statusCode = 500;
+  res.end(res.sentry + "\n");
 });
 
 app.listen(port, () => {
