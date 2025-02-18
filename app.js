@@ -10,6 +10,7 @@ const Chat = require("./models/Chat");
 const User = require("./models/User");
 const Schedule = require("./models/Schedule");
 const { v4: uuid } = require("uuid");
+const DeletedUser = require("./models/DeletedUser.js");
 
 const port = process.env.PORT;
 const app = express();
@@ -242,41 +243,52 @@ app.delete("/api/deleteUser", async (req, res) => {
       });
     }
 
-    const { availableTimes } = user;
+    const { availableTimes, _id } = user;
+
+    const deletedUser = new DeletedUser({ tableId, name, userId: _id, availableTimes });
+    await deletedUser.save();
+
     await User.deleteOne({ tableId, name });
 
+    const users = await User.find({ tableId });
     const schedule = await Schedule.findOne({ tableId });
     if (schedule) {
-      const totalUsers = await User.countDocuments({ tableId });
-      const updatedTimeInfo = schedule.timeInfo
-        .map((timeEntry) => {
-          if (availableTimes.includes(timeEntry.time)) {
-            const updatedMembers = timeEntry.members.filter((member) => member !== name);
-            const count = updatedMembers.length;
-
-            let colorNumber = 20;
-            const percentage = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
-
-            if (percentage > 80) {
-              colorNumber = 100;
-            } else if (percentage > 60) {
-              colorNumber = 80;
-            } else if (percentage > 40) {
-              colorNumber = 60;
-            } else if (percentage > 20) {
-              colorNumber = 40;
-            }
-
-            return {
-              ...timeEntry,
-              members: updatedMembers,
-              count,
-              colorNumber,
-            };
+      const timeMembersMap = {};
+      users.forEach((user) => {
+        user.availableTimes.forEach((time) => {
+          if (!timeMembersMap[time]) {
+            timeMembersMap[time] = [];
           }
-          return timeEntry;
-        })
-        .filter((timeEntry) => timeEntry.members.length > 0);
+          timeMembersMap[time].push(user.name);
+        });
+      });
+
+      const totalUsers = users.length;
+
+      const updatedTimeInfo = Object.entries(timeMembersMap).map(([time, members]) => {
+        const count = members.length;
+
+        let colorNumber = 20;
+        const percentage = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
+
+        if (percentage > 80) {
+          colorNumber = 100;
+        } else if (percentage > 60) {
+          colorNumber = 80;
+        } else if (percentage > 40) {
+          colorNumber = 60;
+        } else if (percentage > 20) {
+          colorNumber = 40;
+        }
+
+        return {
+          time,
+          colorNumber,
+          count,
+          members,
+        };
+      });
+
       schedule.timeInfo = updatedTimeInfo;
       await schedule.save();
     }
