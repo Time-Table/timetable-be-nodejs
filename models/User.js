@@ -21,9 +21,9 @@ const userSchema = new mongoose.Schema(
         type: String,
       },
     ],
-    expiresAfter: {
-      type: Date,
-    },
+    // expiresAfter: {
+    //   type: Date,
+    // },
   },
   { timestamps: true }
 );

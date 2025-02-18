@@ -28,10 +28,10 @@ const scheduleSchema = new mongoose.Schema(
         ],
       },
     ],
-    expiresAfter: {
-      type: Date,
-      required: false,
-    },
+    // expiresAfter: {
+    //   type: Date,
+    //   required: false,
+    // },
   },
   { timestamps: true }
 );

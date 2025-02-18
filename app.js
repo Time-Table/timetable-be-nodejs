@@ -21,16 +21,10 @@ app.use(express.urlencoded({ extended: true }));
 mongoose
   .connect(process.env.DB_KEY)
   .then(() => console.log(`mongoDB connected!`))
-  .catch((err) => console.log(err));
-
-app.get("/", async (req, res) => {
-  return res.send("hi");
-});
-
-app.get("/debug-sentry", function mainHandler(req, res) {
-  Sentry.captureException("here");
-  throw new Error("My! first Sentry error!");
-});
+  .catch((err) => {
+    console.error("MongoDB 연결 실패:", err);
+    process.exit(1);
+  });
 
 app.post("/api/create", async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
@@ -52,6 +46,7 @@ app.post("/api/create", async (req, res) => {
       data: { tableId: savedTable.tableId },
     });
   } catch (err) {
+    Sentry.captureException(err);
     console.error("/api/create error:", err);
     res.status(400).json({ success: false, err: err, code: 400 });
   }
@@ -59,52 +54,53 @@ app.post("/api/create", async (req, res) => {
 
 app.get("/api/tableInfo", async (req, res) => {
   const { tableId } = req.query;
-  const expiresAfter = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 현재 시간 + 100일
 
   if (!tableId) {
     return res.status(400).json({ success: false, message: "TableId를 받지 못했습니다." });
   }
+  //TTL
+  // const expiresAfter = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 현재 시간 + 100일
+  // const userData = await User.findOne({ tableId: tableId });
+  // const scheduleData = await Schedule.findOne({ tableId: tableId });
+  // const chatData = await Chat.findOne({ tableId: tableId });
 
-  const userData = await User.findOne({ tableId: tableId });
-  const scheduleData = await Schedule.findOne({ tableId: tableId });
-  const chatData = await Chat.findOne({ tableId: tableId });
-  const tableData = await Table.findOne({ tableId: tableId });
+  // try {
+  //   if (userData) {
+  //     userData.expiresAfter = expiresAfter;
 
+  //     await userData.save();
+  //   }
+  //   if (scheduleData) {
+  //     scheduleData.expiresAfter = expiresAfter;
+  //     await scheduleData.save();
+  //   }
+  //   if (chatData) {
+  //     chatData.expiresAfter = expiresAfter;
+  //     await chatData.save();
+  //   }
+
+  //   if (
+  //     !tableData
+  //     // || !userData || !scheduleData || !chatData
+  //   ) {
+  //     return res.status(404).json({
+  //       success: false,
+  //       message: "테이블을 찾을 수 없습니다.",
+  //       queriedId: tableId,
+  //     });
+  //   }
+
+  //   // expiresAfter 갱신
+  //   tableData.expiresAfter = expiresAfter;
+
+  //   await tableData.save();
   try {
-    if (userData) {
-      userData.expiresAfter = expiresAfter;
+    const tableData = await Table.findOne({ tableId: tableId });
 
-      await userData.save();
-    }
-    if (scheduleData) {
-      scheduleData.expiresAfter = expiresAfter;
-      await scheduleData.save();
-    }
-    if (chatData) {
-      chatData.expiresAfter = expiresAfter;
-      await chatData.save();
-    }
-
-    if (
-      !tableData
-      // || !userData || !scheduleData || !chatData
-    ) {
-      return res.status(404).json({
-        success: false,
-        message: "테이블을 찾을 수 없습니다.",
-        queriedId: tableId,
-      });
-    }
-
-    // expiresAfter 갱신
-    tableData.expiresAfter = expiresAfter;
-
-    await tableData.save();
-
-    res.status(200).json({ success: true, data: tableData });
-  } catch (error) {
-    console.error("Error fetching table:", error);
-    res.status(500).json({ success: false, message: "서버 오류가 발생했습니다.", error });
+    return res.status(200).json({ success: true, data: tableData });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ success: false, message: "서버 오류가 발생했습니다.", err });
   }
 });
 
@@ -150,22 +146,21 @@ app.post("/api/join", async (req, res) => {
       message: "유저 등록 성공",
       data: { name: user.name, availableTimes: user.availableTimes },
     });
-  } catch (error) {
-    console.error("/api/join error:", error);
-
-    if (error.code === 11000) {
+  } catch (err) {
+    if (err.code === 11000) {
       return res.status(400).json({
         success: false,
         code: 400,
         message: "이미 사용 중인 이름입니다. 다른 이름을 선택하세요.",
       });
     }
+    Sentry.captureException(err);
 
     return res.status(500).json({
       success: false,
       code: 500,
       message: "서버 오류가 발생했습니다.",
-      error,
+      err,
     });
   }
 });
@@ -206,12 +201,12 @@ app.get("/api/userInfo", async (req, res) => {
         name: userData.name,
       },
     });
-  } catch (error) {
-    console.error("Error /api/userInfo:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
-      error,
+      err,
     });
   }
 });
@@ -297,12 +292,12 @@ app.delete("/api/deleteUser", async (req, res) => {
       success: true,
       message: "유저가 성공적으로 삭제되었습니다.",
     });
-  } catch (error) {
-    console.error("Error deleting user:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
-      error,
+      err,
     });
   }
 });
@@ -387,12 +382,12 @@ app.post("/api/addSchedule", async (req, res) => {
       message: "스케줄이 성공적으로 업데이트되었습니다.",
       data: { userAvailableTimes: user.availableTimes, scheduleTimeInfo: timeInfo },
     });
-  } catch (error) {
-    console.error("Error updating schedule:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
-      error,
+      err,
     });
   }
 });
@@ -423,12 +418,12 @@ app.get("/api/users", async (req, res) => {
       data: users,
       code: 200,
     });
-  } catch (error) {
-    console.error("Error fetching users:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
-      error,
+      err,
     });
   }
 });
@@ -494,12 +489,12 @@ app.post("/api/generateSchedule", async (req, res) => {
       message: "Schedule generated successfully.",
       data: timeInfo,
     });
-  } catch (error) {
-    console.error("Error generating schedule:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     return res.status(500).json({
       success: false,
       message: "An error occurred while generating the schedule.",
-      error,
+      err,
     });
   }
 });
@@ -528,12 +523,12 @@ app.get("/api/getSchedule", async (req, res) => {
       success: true,
       data: schedule.timeInfo,
     });
-  } catch (error) {
-    console.error("Error fetching schedule:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     return res.status(500).json({
       success: false,
       message: "An error occurred while fetching the schedule.",
-      error,
+      err,
     });
   }
 });
@@ -542,7 +537,6 @@ app.post("/api/postChat", async (req, res) => {
   const { tableId, name, message } = req.body;
 
   if (!tableId || !name || !message) {
-    console.log(tableId, name, message);
     return res.status(400).json({
       success: false,
       message: "필수 데이터를 모두 입력하세요. (tableId, name, message)",
@@ -579,12 +573,12 @@ app.post("/api/postChat", async (req, res) => {
       success: true,
       message: "채팅 메시지가 저장되었습니다.",
     });
-  } catch (error) {
-    console.error("Error posting chat:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     return res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
-      error,
+      err,
     });
   }
 });
@@ -616,12 +610,12 @@ app.get("/api/getChating", async (req, res) => {
       data: chatData.chats,
       status: 200,
     });
-  } catch (error) {
-    console.error("Error fetching chat:", error);
+  } catch (err) {
+    Sentry.captureException(err);
     return res.status(500).json({
       success: false,
       message: "서버 오류가 발생했습니다.",
-      error,
+      err,
     });
   }
 });
