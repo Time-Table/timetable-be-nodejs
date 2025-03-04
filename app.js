@@ -96,6 +96,13 @@ app.get("/api/tableInfo", async (req, res) => {
   //   await tableData.save();
   try {
     const tableData = await Table.findOne({ tableId: tableId });
+    if (!tableData || !userData || !scheduleData || !chatData) {
+      return res.status(404).json({
+        success: false,
+        message: "테이블을 찾을 수 없습니다.",
+        queriedId: tableId,
+      });
+    }
 
     return res.status(200).json({ success: true, data: tableData });
   } catch (err) {
@@ -185,7 +192,8 @@ app.get("/api/userInfo", async (req, res) => {
       });
     }
 
-    if (userData.password !== password) {
+    const isMatch = await userData.comparePassword(password);
+    if (!isMatch) {
       return res.status(401).json({
         success: false,
         code: 401,
@@ -231,7 +239,8 @@ app.delete("/api/deleteUser", async (req, res) => {
       });
     }
 
-    if (password && user.password !== password) {
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
       return res.status(401).json({
         success: false,
         message: "비밀번호가 일치하지 않습니다.",
