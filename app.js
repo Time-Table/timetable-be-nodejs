@@ -96,7 +96,7 @@ app.get("/api/tableInfo", async (req, res) => {
   //   await tableData.save();
   try {
     const tableData = await Table.findOne({ tableId: tableId });
-    if (!tableData || !userData || !scheduleData || !chatData) {
+    if (!tableData) {
       return res.status(404).json({
         success: false,
         message: "테이블을 찾을 수 없습니다.",
