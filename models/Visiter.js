@@ -17,6 +17,9 @@ const visiterSchema = new mongoose.Schema({
   todayVisitUsePage: { type: Number, default: 0 },
   totalVisitUsePage: { type: Number, default: 0 },
 
+  todayTableCreateCount: { type: Number, default: 0 },
+  totalTableCreateCount: { type: Number, default: 0 },
+
   todaySignUp: { type: Number, default: 0 },
   totalSignUp: { type: Number, default: 0 },
 
@@ -48,6 +51,11 @@ visiterSchema.pre("save", async function (next) {
       }
       if (this.isModified("todayLogin")) {
         this.totalLogin = previousData.totalLogin + 1;
+      }
+
+      // 📌 테이블 생성 횟수 업데이트
+      if (this.isModified("todayTableCreateCount")) {
+        this.totalTableCreateCount = previousData.totalTableCreateCount + 1;
       }
     }
   } catch (error) {

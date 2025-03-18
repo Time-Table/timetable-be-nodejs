@@ -98,16 +98,35 @@ app.get("/api/getTrackVisit", async (req, res) => {
 app.post("/api/create", async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
   const tableId = uuid();
-  const table = new Table({
-    title,
-    tableId,
-    dates,
-    startHour,
-    endHour,
-    banedCells,
-  });
+
   try {
+    const table = new Table({
+      title,
+      tableId,
+      dates,
+      startHour,
+      endHour,
+      banedCells,
+    });
+
     const savedTable = await table.save();
+
+    const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
+    let visiterData = await Visiter.findOne({ date: today });
+
+    if (!visiterData) {
+      visiterData = new Visiter({
+        date: today,
+        todayTableCreateCount: 1,
+        totalTableCreateCount: 1,
+      });
+    } else {
+      visiterData.todayTableCreateCount += 1;
+      visiterData.totalTableCreateCount += 1;
+    }
+
+    await visiterData.save();
+
     res.status(200).json({
       success: true,
       code: 200,
