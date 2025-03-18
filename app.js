@@ -11,6 +11,8 @@ const User = require("./models/User");
 const Schedule = require("./models/Schedule");
 const { v4: uuid } = require("uuid");
 const DeletedUser = require("./models/DeletedUser.js");
+const Visiter = require("./models/Visiter.js");
+const moment = require("moment-timezone");
 
 const port = process.env.PORT;
 const app = express();
@@ -25,6 +27,73 @@ mongoose
     console.error("MongoDB 연결 실패:", err);
     process.exit(1);
   });
+
+app.post("/api/trackVisit", async (req, res) => {
+  const { page } = req.body;
+  const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
+
+  try {
+    let visiterData = await Visiter.findOne({ date: today });
+
+    if (!visiterData) {
+      const previousData = await Visiter.findOne().sort({ date: -1 });
+
+      visiterData = new Visiter({
+        date: today,
+        todayVisitCreatePage: 0,
+        todayVisitAboutPage: 0,
+        todayVisitUsePage: 0,
+        totalVisitCreatePage: previousData ? previousData.totalVisitCreatePage : 0,
+        totalVisitAboutPage: previousData ? previousData.totalVisitAboutPage : 0,
+        totalVisitUsePage: previousData ? previousData.totalVisitUsePage : 0,
+        totalSignUp: previousData ? previousData.totalSignUp : 0,
+        totalLogin: previousData ? previousData.totalLogin : 0,
+      });
+    }
+
+    if (page === "create") {
+      visiterData.todayVisitCreatePage += 1;
+      visiterData.totalVisitCreatePage += 1;
+    } else if (page === "about") {
+      visiterData.todayVisitAboutPage += 1;
+      visiterData.totalVisitAboutPage += 1;
+    } else if (page === "table") {
+      visiterData.todayVisitUsePage += 1;
+      visiterData.totalVisitUsePage += 1;
+    }
+
+    await visiterData.save();
+
+    res.status(200).json({
+      success: true,
+      message: `${page} 페이지 방문 기록 업데이트 완료`,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "서버 오류 발생", err });
+  }
+});
+
+app.get("/api/getTrackVisit", async (req, res) => {
+  try {
+    const visiterData = await Visiter.find().sort({ date: -1 });
+
+    if (!visiterData || visiterData.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          "정보가 비었어요.": "😭",
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: visiterData,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "서버 오류 발생", err });
+  }
+});
 
 app.post("/api/create", async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
@@ -113,11 +182,21 @@ app.get("/api/tableInfo", async (req, res) => {
 
 app.post("/api/join", async (req, res) => {
   const { tableId, name, password, availableTimes } = req.body;
+  const inputCondition = /^[A-Za-z0-9\uAC00-\uD7A3\u3131-\u318E\s]+$/;
 
   if (!tableId || !name || !password) {
     return res.status(400).json({
       success: false,
+      code: 400,
       message: "필수 데이터를 입력하세요.",
+    });
+  }
+
+  if (!inputCondition.test(name)) {
+    return res.status(401).json({
+      success: false,
+      code: 401,
+      message: "이름 양식이 잘못되었습니다.",
     });
   }
 
@@ -126,17 +205,47 @@ app.post("/api/join", async (req, res) => {
     if (!tableData) {
       return res.status(404).json({
         success: false,
+        code: 404,
         message: "테이블을 찾을 수 없습니다.",
         queriedId: tableId,
       });
     }
-    const userData = await User.findOne({ tableId, name, password });
-    if (userData)
-      return res.status(201).json({
+
+    const userData = await User.findOne({ tableId, name }).select("+password");
+    if (userData) {
+      const isMatch = await userData.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({
+          code: 401,
+          success: false,
+          message: "비밀번호가 일치하지 않습니다.",
+        });
+      }
+
+      try {
+        const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
+        let visiterData = await Visiter.findOne({ date: today });
+        if (!visiterData) {
+          visiterData = new Visiter({ date: today });
+        }
+        visiterData.todayLogin += 1;
+        await visiterData.save();
+      } catch (err) {
+        return res.status(500).json({
+          success: false,
+          message: "서버 오류 발생",
+          code: 500,
+          err,
+        });
+      }
+
+      return res.status(200).json({
         success: true,
-        data: userData,
+        code: 200,
+        data: { name: userData.name, availableTimes: userData.availableTimes },
         message: "해당 유저로 로그인됩니다.",
       });
+    }
 
     const user = new User({
       tableId,
@@ -147,9 +256,22 @@ app.post("/api/join", async (req, res) => {
 
     await user.save();
 
+    try {
+      const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
+
+      let visiterData = await Visiter.findOne({ date: today });
+      if (!visiterData) {
+        visiterData = new Visiter({ date: today });
+      }
+      visiterData.todaySignUp += 1;
+      await visiterData.save();
+    } catch (err) {
+      return res.status(500).json({ success: false, message: "서버 오류 발생", code: 400, err });
+    }
+
     return res.status(200).json({
       success: true,
-      code: 200,
+      code: 201,
       message: "유저 등록 성공",
       data: { name: user.name, availableTimes: user.availableTimes },
     });
