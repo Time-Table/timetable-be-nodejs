@@ -59,37 +59,51 @@ app.post("/api/trackVisit", async (req, res) => {
   const { page } = req.body;
   const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
 
+  const updateFields = {};
+  if (page === "create") {
+    updateFields.todayVisitCreatePage = 1;
+    updateFields.totalVisitCreatePage = 1;
+  } else if (page === "about") {
+    updateFields.todayVisitAboutPage = 1;
+    updateFields.totalVisitAboutPage = 1;
+  } else if (page === "table") {
+    updateFields.todayVisitUsePage = 1;
+    updateFields.totalVisitUsePage = 1;
+  }
+
   try {
-    let visiterData = await Visiter.findOne({ date: today });
+    const updatedVisiter = await Visiter.findOneAndUpdate(
+      { date: today },
+      { $inc: updateFields },
+      { new: true }
+    );
 
-    if (!visiterData) {
+    if (!updatedVisiter) {
       const previousData = await Visiter.findOne().sort({ date: -1 });
-
-      visiterData = new Visiter({
+      const newVisiter = new Visiter({
         date: today,
-        todayVisitCreatePage: 0,
-        todayVisitAboutPage: 0,
-        todayVisitUsePage: 0,
-        totalVisitCreatePage: previousData ? previousData.totalVisitCreatePage : 0,
-        totalVisitAboutPage: previousData ? previousData.totalVisitAboutPage : 0,
-        totalVisitUsePage: previousData ? previousData.totalVisitUsePage : 0,
+        todayVisitCreatePage: page === "create" ? 1 : 0,
+        todayVisitAboutPage: page === "about" ? 1 : 0,
+        todayVisitUsePage: page === "table" ? 1 : 0,
+        totalVisitCreatePage: (previousData ? previousData.totalVisitCreatePage : 0) + (page === "create" ? 1 : 0),
+        totalVisitAboutPage: (previousData ? previousData.totalVisitAboutPage : 0) + (page === "about" ? 1 : 0),
+        totalVisitUsePage: (previousData ? previousData.totalVisitUsePage : 0) + (page === "table" ? 1 : 0),
         totalSignUp: previousData ? previousData.totalSignUp : 0,
         totalLogin: previousData ? previousData.totalLogin : 0,
+        todayTableCreateCount: 0,
+        totalTableCreateCount: previousData ? previousData.totalTableCreateCount : 0,
       });
-    }
 
-    if (page === "create") {
-      visiterData.todayVisitCreatePage += 1;
-      visiterData.totalVisitCreatePage += 1;
-    } else if (page === "about") {
-      visiterData.todayVisitAboutPage += 1;
-      visiterData.totalVisitAboutPage += 1;
-    } else if (page === "table") {
-      visiterData.todayVisitUsePage += 1;
-      visiterData.totalVisitUsePage += 1;
+      try {
+        await newVisiter.save();
+      } catch (saveErr) {
+        if (saveErr.code === 11000) {
+          await Visiter.findOneAndUpdate({ date: today }, { $inc: updateFields });
+        } else {
+          throw saveErr;
+        }
+      }
     }
-
-    await visiterData.save();
 
     res.status(200).json({
       success: true,
@@ -137,21 +151,39 @@ app.post("/api/create", async (req, res) => {
     });
 
     const savedTable = await table.save();
-
+    
     const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
-    let visiterData = await Visiter.findOne({ date: today });
-    if (!visiterData) {
-      visiterData = new Visiter({
+    const updateFields = { todayTableCreateCount: 1, totalTableCreateCount: 1 };
+
+    const updatedVisiter = await Visiter.findOneAndUpdate(
+      { date: today },
+      { $inc: updateFields },
+      { new: true }
+    );
+
+    if (!updatedVisiter) {
+      const previousData = await Visiter.findOne().sort({ date: -1 });
+      const currentTableCount = await Table.countDocuments({});
+      
+      const newVisiter = new Visiter({
         date: today,
         todayTableCreateCount: 1,
-        totalTableCreateCount: await Table.countDocuments({}),
+        totalTableCreateCount: currentTableCount,
+        totalVisitCreatePage: previousData ? previousData.totalVisitCreatePage : 0,
+        totalVisitAboutPage: previousData ? previousData.totalVisitAboutPage : 0,
+        totalVisitUsePage: previousData ? previousData.totalVisitUsePage : 0,
+        totalSignUp: previousData ? previousData.totalSignUp : 0,
+        totalLogin: previousData ? previousData.totalLogin : 0,
       });
-    } else {
-      visiterData.todayTableCreateCount += 1;
-      visiterData.totalTableCreateCount = await Table.countDocuments({});
-    }
 
-    await visiterData.save();
+      try {
+        await newVisiter.save();
+      } catch (saveErr) {
+        if (saveErr.code === 11000) {
+           await Visiter.findOneAndUpdate({ date: today }, { $inc: updateFields });
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -172,42 +204,7 @@ app.get("/api/tableInfo", async (req, res) => {
   if (!tableId) {
     return res.status(400).json({ success: false, message: "TableId를 받지 못했습니다." });
   }
-  //TTL
-  // const expiresAfter = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 현재 시간 + 100일
-  // const userData = await User.findOne({ tableId: tableId });
-  // const scheduleData = await Schedule.findOne({ tableId: tableId });
-  // const chatData = await Chat.findOne({ tableId: tableId });
 
-  // try {
-  //   if (userData) {
-  //     userData.expiresAfter = expiresAfter;
-
-  //     await userData.save();
-  //   }
-  //   if (scheduleData) {
-  //     scheduleData.expiresAfter = expiresAfter;
-  //     await scheduleData.save();
-  //   }
-  //   if (chatData) {
-  //     chatData.expiresAfter = expiresAfter;
-  //     await chatData.save();
-  //   }
-
-  //   if (
-  //     !tableData
-  //     // || !userData || !scheduleData || !chatData
-  //   ) {
-  //     return res.status(404).json({
-  //       success: false,
-  //       message: "테이블을 찾을 수 없습니다.",
-  //       queriedId: tableId,
-  //     });
-  //   }
-
-  //   // expiresAfter 갱신
-  //   tableData.expiresAfter = expiresAfter;
-
-  //   await tableData.save();
   try {
     const tableData = await Table.findOne({ tableId: tableId });
     if (!tableData) {
@@ -269,12 +266,33 @@ app.post("/api/join", async (req, res) => {
 
       try {
         const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
-        let visiterData = await Visiter.findOne({ date: today });
-        if (!visiterData) {
-          visiterData = new Visiter({ date: today });
+        const updateFields = { todayLogin: 1, totalLogin: 1 };
+
+        const updatedVisiter = await Visiter.findOneAndUpdate(
+          { date: today },
+          { $inc: updateFields },
+          { new: true }
+        );
+
+        if (!updatedVisiter) {
+          const previousData = await Visiter.findOne().sort({ date: -1 });
+          const newVisiter = new Visiter({
+            date: today,
+            todayLogin: 1,
+            totalLogin: (previousData ? previousData.totalLogin : 0) + 1,
+            totalSignUp: previousData ? previousData.totalSignUp : 0,
+            totalVisitCreatePage: previousData ? previousData.totalVisitCreatePage : 0,
+            totalVisitAboutPage: previousData ? previousData.totalVisitAboutPage : 0,
+            totalVisitUsePage: previousData ? previousData.totalVisitUsePage : 0,
+            totalTableCreateCount: previousData ? previousData.totalTableCreateCount : 0,
+          });
+          try {
+            await newVisiter.save();
+          } catch (e) {
+            if (e.code === 11000)
+              await Visiter.findOneAndUpdate({ date: today }, { $inc: updateFields });
+          }
         }
-        visiterData.todayLogin += 1;
-        await visiterData.save();
       } catch (err) {
         return res.status(500).json({
           success: false,
@@ -303,13 +321,33 @@ app.post("/api/join", async (req, res) => {
 
     try {
       const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
+      const updateFields = { todaySignUp: 1, totalSignUp: 1 };
 
-      let visiterData = await Visiter.findOne({ date: today });
-      if (!visiterData) {
-        visiterData = new Visiter({ date: today });
+      const updatedVisiter = await Visiter.findOneAndUpdate(
+        { date: today },
+        { $inc: updateFields },
+        { new: true }
+      );
+
+      if (!updatedVisiter) {
+        const previousData = await Visiter.findOne().sort({ date: -1 });
+        const newVisiter = new Visiter({
+          date: today,
+          todaySignUp: 1,
+          totalSignUp: (previousData ? previousData.totalSignUp : 0) + 1,
+          totalLogin: previousData ? previousData.totalLogin : 0,
+          totalVisitCreatePage: previousData ? previousData.totalVisitCreatePage : 0,
+          totalVisitAboutPage: previousData ? previousData.totalVisitAboutPage : 0,
+          totalVisitUsePage: previousData ? previousData.totalVisitUsePage : 0,
+          totalTableCreateCount: previousData ? previousData.totalTableCreateCount : 0,
+        });
+        try {
+          await newVisiter.save();
+        } catch (e) {
+          if (e.code === 11000)
+            await Visiter.findOneAndUpdate({ date: today }, { $inc: updateFields });
+        }
       }
-      visiterData.todaySignUp += 1;
-      await visiterData.save();
     } catch (err) {
       return res.status(500).json({ success: false, message: "서버 오류 발생", code: 400, err });
     }
@@ -419,50 +457,47 @@ app.delete("/api/deleteUser", async (req, res) => {
     const deletedUser = new DeletedUser({ tableId, name, userId: _id, availableTimes });
     await deletedUser.save();
 
-    await User.deleteOne({ tableId, name });
+    await User.findOneAndDelete({ tableId, name });
 
     const users = await User.find({ tableId });
-    const schedule = await Schedule.findOne({ tableId });
-    if (schedule) {
-      const timeMembersMap = {};
-      users.forEach((user) => {
-        user.availableTimes.forEach((time) => {
-          if (!timeMembersMap[time]) {
-            timeMembersMap[time] = [];
-          }
-          timeMembersMap[time].push(user.name);
-        });
-      });
-
-      const totalUsers = users.length;
-
-      const updatedTimeInfo = Object.entries(timeMembersMap).map(([time, members]) => {
-        const count = members.length;
-
-        let colorNumber = 20;
-        const percentage = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
-
-        if (percentage > 80) {
-          colorNumber = 100;
-        } else if (percentage > 60) {
-          colorNumber = 80;
-        } else if (percentage > 40) {
-          colorNumber = 60;
-        } else if (percentage > 20) {
-          colorNumber = 40;
+    
+    const timeMembersMap = {};
+    users.forEach((user) => {
+      user.availableTimes.forEach((time) => {
+        if (!timeMembersMap[time]) {
+          timeMembersMap[time] = [];
         }
-
-        return {
-          time,
-          colorNumber,
-          count,
-          members,
-        };
+        timeMembersMap[time].push(user.name);
       });
+    });
 
-      schedule.timeInfo = updatedTimeInfo;
-      await schedule.save();
-    }
+    const totalUsers = users.length;
+
+    const updatedTimeInfo = Object.entries(timeMembersMap).map(([time, members]) => {
+      const count = members.length;
+
+      let colorNumber = 20;
+      const percentage = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
+
+      if (percentage > 80) {
+        colorNumber = 100;
+      } else if (percentage > 60) {
+        colorNumber = 80;
+      } else if (percentage > 40) {
+        colorNumber = 60;
+      } else if (percentage > 20) {
+        colorNumber = 40;
+      }
+
+      return {
+        time,
+        colorNumber,
+        count,
+        members,
+      };
+    });
+
+    await Schedule.findOneAndUpdate({ tableId }, { timeInfo: updatedTimeInfo }, { upsert: true });
 
     res.status(200).json({
       success: true,
@@ -489,16 +524,18 @@ app.post("/api/addSchedule", async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ tableId, name });
+    const user = await User.findOneAndUpdate(
+      { tableId, name },
+      { availableTimes: Array.from(new Set([...availableTimes])) },
+      { new: true }
+    );
+
     if (!user) {
       return res.status(404).json({
         success: false,
         message: "유저를 찾을 수 없습니다.",
       });
     }
-
-    user.availableTimes = Array.from(new Set([...availableTimes]));
-    await user.save();
 
     const users = await User.find({ tableId });
 
@@ -545,13 +582,7 @@ app.post("/api/addSchedule", async (req, res) => {
       };
     });
 
-    const existingSchedule = await Schedule.findOne({ tableId });
-    if (existingSchedule) {
-      existingSchedule.timeInfo = timeInfo;
-      await existingSchedule.save();
-    } else {
-      await Schedule.create({ tableId, timeInfo });
-    }
+    await Schedule.findOneAndUpdate({ tableId }, { timeInfo }, { upsert: true });
 
     res.status(200).json({
       success: true,
@@ -652,13 +683,7 @@ app.post("/api/generateSchedule", async (req, res) => {
       };
     });
 
-    const existingSchedule = await Schedule.findOne({ tableId });
-    if (existingSchedule) {
-      existingSchedule.timeInfo = timeInfo;
-      await existingSchedule.save();
-    } else {
-      await Schedule.create({ tableId, timeInfo });
-    }
+    await Schedule.findOneAndUpdate({ tableId }, { timeInfo }, { upsert: true });
 
     return res.status(200).json({
       success: true,
@@ -729,21 +754,17 @@ app.post("/api/postChat", async (req, res) => {
       });
     }
 
-    const existingChat = await Chat.findOne({ tableId });
-    if (existingChat) {
-      existingChat.chats.push({
-        name,
-        message: message,
-        timestamp: new Date(),
-      });
-      await existingChat.save();
-    } else {
-      const newChat = new Chat({
-        tableId,
-        chats: [{ name, message: message, timestamp: new Date() }],
-      });
-      await newChat.save();
-    }
+    const newMessage = {
+      name,
+      message: message,
+      timestamp: new Date(),
+    };
+
+    await Chat.findOneAndUpdate(
+      { tableId },
+      { $push: { chats: newMessage } },
+      { upsert: true, new: true }
+    );
 
     return res.status(200).json({
       success: true,
