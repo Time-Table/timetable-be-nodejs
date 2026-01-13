@@ -1,9 +1,9 @@
 const userService = require("../services/userService");
 const Sentry = require("@sentry/node");
+const { NAME_VALIDATION_REGEX } = require("../utils/constants");
 
 const join = async (req, res) => {
   const { tableId, name, password, availableTimes } = req.body;
-  const inputCondition = /^[A-Za-z0-9\uAC00-\uD7A3\u3131-\u318E\s]+$/;
 
   if (!tableId || !name || !password) {
     return res.status(400).json({
@@ -13,7 +13,7 @@ const join = async (req, res) => {
     });
   }
 
-  if (!inputCondition.test(name)) {
+  if (!NAME_VALIDATION_REGEX.test(name)) {
     return res.status(401).json({
       success: false,
       code: 401,
@@ -58,7 +58,7 @@ const join = async (req, res) => {
 };
 
 const userInfo = async (req, res) => {
-  const { tableId, name, password } = req.query;
+  const { tableId, name, password } = req.body;
   if (!tableId || !name || !password) {
     return res.status(400).json({
       success: false,

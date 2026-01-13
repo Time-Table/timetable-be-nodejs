@@ -1,3 +1,5 @@
+const { COLOR_THRESHOLDS, COLOR_VALUES } = require("./constants");
+
 /**
  * @param {Array} users
  * @returns {Array}
@@ -20,17 +22,17 @@ const calculateTimeInfo = (users) => {
 
   return Object.entries(timeMembersMap).map(([time, members]) => {
     const count = members.length;
-    let colorNumber = 20;
+    let colorNumber = COLOR_VALUES.LOW;
     const percentage = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
 
-    if (percentage > 80) {
-      colorNumber = 100;
-    } else if (percentage > 60) {
-      colorNumber = 80;
-    } else if (percentage > 40) {
-      colorNumber = 60;
-    } else if (percentage > 20) {
-      colorNumber = 40;
+    if (percentage > COLOR_THRESHOLDS.HIGH) {
+      colorNumber = COLOR_VALUES.MAX;
+    } else if (percentage > COLOR_THRESHOLDS.MEDIUM_HIGH) {
+      colorNumber = COLOR_VALUES.HIGH;
+    } else if (percentage > COLOR_THRESHOLDS.MEDIUM) {
+      colorNumber = COLOR_VALUES.MEDIUM;
+    } else if (percentage > COLOR_THRESHOLDS.LOW) {
+      colorNumber = COLOR_VALUES.LOW;
     }
 
     return {
@@ -60,16 +62,16 @@ const calculateSimpleTimeInfo = (users) => {
 
   return Object.entries(timeCounts).map(([time, count]) => {
     const percentage = totalUsers > 0 ? (count / totalUsers) * 100 : 0;
-    let colorNumber = 20;
+    let colorNumber = COLOR_VALUES.LOW;
 
-    if (percentage > 80) {
-      colorNumber = 100;
-    } else if (percentage > 60) {
-      colorNumber = 80;
-    } else if (percentage > 40) {
-      colorNumber = 60;
-    } else if (percentage > 20) {
-      colorNumber = 40;
+    if (percentage > COLOR_THRESHOLDS.HIGH) {
+      colorNumber = COLOR_VALUES.MAX;
+    } else if (percentage > COLOR_THRESHOLDS.MEDIUM_HIGH) {
+      colorNumber = COLOR_VALUES.HIGH;
+    } else if (percentage > COLOR_THRESHOLDS.MEDIUM) {
+      colorNumber = COLOR_VALUES.MEDIUM;
+    } else if (percentage > COLOR_THRESHOLDS.LOW) {
+      colorNumber = COLOR_VALUES.LOW;
     }
 
     return {

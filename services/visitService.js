@@ -1,8 +1,9 @@
 const Visiter = require("../models/Visiter");
 const moment = require("moment-timezone");
+const { TIMEZONE } = require("../utils/constants");
 
 const updateVisitStats = async (updateFields) => {
-  const today = moment().tz("Asia/Seoul").format("YYYY-MM-DD");
+  const today = moment().tz(TIMEZONE).format("YYYY-MM-DD");
 
   try {
     const updatedVisiter = await Visiter.findOneAndUpdate(

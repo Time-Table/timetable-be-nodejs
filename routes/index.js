@@ -10,10 +10,10 @@ const chatRoutes = require("./chatRoutes");
 
 router.use(generalLimiter);
 
-router.use("/", visitRoutes);
-router.use("/", tableRoutes);
-router.use("/", userRoutes);
-router.use("/", scheduleRoutes);
-router.use("/", chatRoutes);
+router.use("/visits", visitRoutes);
+router.use("/tables", tableRoutes);
+router.use("/users", userRoutes);
+router.use("/schedules", scheduleRoutes);
+router.use("/chats", chatRoutes);
 
 module.exports = router;

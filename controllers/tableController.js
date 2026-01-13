@@ -21,7 +21,7 @@ const createTable = async (req, res) => {
 };
 
 const getTableInfo = async (req, res) => {
-  const { tableId } = req.query;
+  const { tableId } = req.params;
 
   if (!tableId) {
     return res.status(400).json({ success: false, message: "TableId를 받지 못했습니다." });

@@ -1,12 +1,13 @@
 const mongoose = require("mongoose");
 const moment = require("moment-timezone");
+const { TIMEZONE } = require("../utils/constants");
 
 const visiterSchema = new mongoose.Schema({
      date: {
           type: String,
           required: true,
           unique: true,
-          default: () => moment().tz("Asia/Seoul").format("YYYY-MM-DD"),
+          default: () => moment().tz(TIMEZONE).format("YYYY-MM-DD"),
      },
      todayVisitCreatePage: { type: Number, default: 0 },
      totalVisitCreatePage: { type: Number, default: 0 },
