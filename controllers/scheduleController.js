@@ -4,13 +4,6 @@ const Sentry = require("@sentry/node");
 const addSchedule = async (req, res) => {
   const { tableId, name, availableTimes } = req.body;
 
-  if (!tableId || !name || !Array.isArray(availableTimes)) {
-    return res.status(400).json({
-      success: false,
-      message: "필수 데이터를 올바르게 입력하세요. (tableId, name, availableTimes)",
-    });
-  }
-
   try {
     const result = await scheduleService.addSchedule({ tableId, name, availableTimes });
 

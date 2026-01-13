@@ -4,13 +4,6 @@ const Sentry = require("@sentry/node");
 const postChat = async (req, res) => {
   const { tableId, name, message } = req.body;
 
-  if (!tableId || !name || !message) {
-    return res.status(400).json({
-      success: false,
-      message: "필수 데이터를 모두 입력하세요. (tableId, name, message)",
-    });
-  }
-
   try {
     await chatService.postChat({ tableId, name, message });
 

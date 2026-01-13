@@ -1,25 +1,8 @@
 const userService = require("../services/userService");
 const Sentry = require("@sentry/node");
-const { NAME_VALIDATION_REGEX } = require("../utils/constants");
 
 const join = async (req, res) => {
   const { tableId, name, password, availableTimes } = req.body;
-
-  if (!tableId || !name || !password) {
-    return res.status(400).json({
-      success: false,
-      code: 400,
-      message: "필수 데이터를 입력하세요.",
-    });
-  }
-
-  if (!NAME_VALIDATION_REGEX.test(name)) {
-    return res.status(401).json({
-      success: false,
-      code: 401,
-      message: "이름 양식이 잘못되었습니다.",
-    });
-  }
 
   try {
     const result = await userService.joinTable({ tableId, name, password, availableTimes });
