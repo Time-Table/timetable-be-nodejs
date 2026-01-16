@@ -5,10 +5,20 @@ const { TIMEZONE } = require("../utils/constants");
 const updateVisitStats = async (updateFields) => {
   const today = moment().tz(TIMEZONE).format("YYYY-MM-DD");
 
+  // Create an object to hold all increments (both today and total)
+  const incUpdateFields = { ...updateFields };
+  
+  if (updateFields.todayVisitCreatePage) incUpdateFields.totalVisitCreatePage = updateFields.todayVisitCreatePage;
+  if (updateFields.todayVisitAboutPage) incUpdateFields.totalVisitAboutPage = updateFields.todayVisitAboutPage;
+  if (updateFields.todayVisitUsePage) incUpdateFields.totalVisitUsePage = updateFields.todayVisitUsePage;
+  if (updateFields.todayTableCreateCount) incUpdateFields.totalTableCreateCount = updateFields.todayTableCreateCount;
+  if (updateFields.todaySignUp) incUpdateFields.totalSignUp = updateFields.todaySignUp;
+  if (updateFields.todayLogin) incUpdateFields.totalLogin = updateFields.todayLogin;
+
   try {
     const updatedVisiter = await Visiter.findOneAndUpdate(
       { date: today },
-      { $inc: updateFields },
+      { $inc: incUpdateFields },
       { new: true }
     );
 
@@ -51,7 +61,7 @@ const updateVisitStats = async (updateFields) => {
       if (saveErr.code === 11000) {
         return await Visiter.findOneAndUpdate(
           { date: today },
-          { $inc: updateFields },
+          { $inc: incUpdateFields },
           { new: true }
         );
       } else {
