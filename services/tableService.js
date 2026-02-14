@@ -31,7 +31,22 @@ const getTableByTableId = async (tableId) => {
   return await Table.findOne({ tableId: tableId });
 };
 
+const getAllTables = async () => {
+  return await Table.find().sort({ createdAt: -1 });
+};
+
+const updateTable = async (tableId, updateData) => {
+  return await Table.findOneAndUpdate({ tableId }, updateData, { new: true });
+};
+
+const deleteTable = async (tableId) => {
+  return await Table.findOneAndDelete({ tableId });
+};
+
 module.exports = {
   createTable,
   getTableByTableId,
+  getAllTables,
+  updateTable,
+  deleteTable,
 };

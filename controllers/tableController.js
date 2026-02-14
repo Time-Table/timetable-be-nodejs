@@ -44,7 +44,44 @@ const getTableInfo = async (req, res) => {
   }
 };
 
+const getAllTables = async (req, res) => {
+  try {
+    const tables = await tableService.getAllTables();
+    return res.status(200).json({ success: true, data: tables });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ success: false, message: "서버 오류가 발생했습니다.", err });
+  }
+};
+
+const updateTable = async (req, res) => {
+  const { tableId } = req.params;
+  try {
+    const updatedTable = await tableService.updateTable(tableId, req.body);
+    if (!updatedTable) return res.status(404).json({ success: false, message: "테이블을 찾을 수 없습니다." });
+    return res.status(200).json({ success: true, data: updatedTable });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ success: false, message: "서버 오류", err });
+  }
+};
+
+const deleteTable = async (req, res) => {
+  const { tableId } = req.params;
+  try {
+    const deletedTable = await tableService.deleteTable(tableId);
+    if (!deletedTable) return res.status(404).json({ success: false, message: "테이블을 찾을 수 없습니다." });
+    return res.status(200).json({ success: true, message: "삭제 완료" });
+  } catch (err) {
+    Sentry.captureException(err);
+    res.status(500).json({ success: false, message: "서버 오류", err });
+  }
+};
+
 module.exports = {
   createTable,
   getTableInfo,
+  getAllTables,
+  updateTable,
+  deleteTable,
 };

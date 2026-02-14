@@ -4,7 +4,9 @@ const trackVisit = async (req, res) => {
   const { page } = req.body;
   
   const updateFields = {};
-  if (page === "create") {
+  if (page === "landing") {
+    updateFields.todayVisitLandingPage = 1;
+  } else if (page === "create") {
     updateFields.todayVisitCreatePage = 1;
   } else if (page === "about") {
     updateFields.todayVisitAboutPage = 1;
