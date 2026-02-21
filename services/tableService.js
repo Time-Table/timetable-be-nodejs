@@ -1,4 +1,5 @@
 const Table = require("../models/Table");
+const User = require("../models/User");
 const { v4: uuid } = require("uuid");
 const visitService = require("./visitService");
 
@@ -32,7 +33,21 @@ const getTableByTableId = async (tableId) => {
 };
 
 const getAllTables = async () => {
-  return await Table.find().sort({ createdAt: -1 });
+  const tables = await Table.find().sort({ createdAt: -1 }).lean();
+
+  const userCounts = await User.aggregate([
+    { $group: { _id: "$tableId", count: { $sum: 1 } } },
+  ]);
+
+  const countsMap = userCounts.reduce((acc, curr) => {
+    acc[curr._id] = curr.count;
+    return acc;
+  }, {});
+
+  return tables.map((t) => ({
+    ...t,
+    participantCount: countsMap[t.tableId] || 0,
+  }));
 };
 
 const updateTable = async (tableId, updateData) => {
