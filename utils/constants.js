@@ -41,7 +41,7 @@ const VALIDATION_RULES = {
     MAX_LENGTH: 500,
     MIN_LENGTH: 1,
   },
-  TIME_FORMAT: /^([01]\d|2[0-3]):([0-5]\d)$/, // HH:mm format
+  TIME_FORMAT: /^([01]\d|2[0-3]):([0-5]\d)$|^24:00$/, // HH:mm format, allowing 24:00
   DATE_FORMAT: /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD format
 };
 

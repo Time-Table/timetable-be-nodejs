@@ -36,6 +36,11 @@ const validateTableCreate = (req, res, next) => {
 
   const [startH, startM] = startHour.split(":").map(Number);
   const [endH, endM] = endHour.split(":").map(Number);
+
+  if (endH === 24 && endM > 0) {
+    return res.status(400).json({ success: false, message: "24시 이후의 시간은 설정할 수 없습니다." });
+  }
+
   if (startH > endH || (startH === endH && startM >= endM)) {
     return res
       .status(400)
