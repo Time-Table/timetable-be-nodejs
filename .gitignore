@@ -1,3 +1,5 @@
 .env
 /node_modules
 .DS_Store
+# 하네스 에이전트 정의 (루트 timetable-harness 저장소 소유)
+.claude/
