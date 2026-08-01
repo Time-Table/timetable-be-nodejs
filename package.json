@@ -21,9 +21,11 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "start:client": "cd ../fe-react-deploy && npm start",
+    "start:client": "cd ../timetable-fe-react && npm start",
     "dev": "npx concurrently \"npm run node\" \"npm run start:client\"",
-    "node": "nodemon app"
+    "node": "nodemon app",
+    "test": "node --test \"test/**/*.test.js\"",
+    "verify": "npm test"
   },
   "keywords": [],
   "author": "",

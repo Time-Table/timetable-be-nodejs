@@ -21,6 +21,10 @@ const RATE_LIMIT = {
   CREATE_MAX: 8,
   GENERAL_WINDOW_MS: 1 * 60 * 1000,
   GENERAL_MAX: 1500,
+  // 비밀번호가 4자리(10,000가지)라 무차별 대입이 현실적인 위협이다.
+  // 실패 기준으로만 세므로 정상 사용에는 걸리지 않는다.
+  ADMIN_LOGIN_WINDOW_MS: 15 * 60 * 1000,
+  ADMIN_LOGIN_MAX: 5,
 };
 
 const VALIDATION_RULES = {

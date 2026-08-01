@@ -19,4 +19,15 @@ const generalLimiter = rateLimit({
   skip: (req, res) => req.method === "OPTIONS",
 });
 
-module.exports = { createLimiter, generalLimiter };
+// 관리자 비밀번호 무차별 대입을 막는다. 일반 요청보다 훨씬 빡빡하게 건다.
+const adminLoginLimiter = rateLimit({
+  windowMs: RATE_LIMIT.ADMIN_LOGIN_WINDOW_MS,
+  limit: RATE_LIMIT.ADMIN_LOGIN_MAX,
+  message: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  skip: (req, res) => req.method === "OPTIONS",
+});
+
+module.exports = { createLimiter, generalLimiter, adminLoginLimiter };
