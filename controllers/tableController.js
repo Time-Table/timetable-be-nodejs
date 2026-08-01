@@ -5,7 +5,10 @@ const createTable = async (req, res) => {
   const { title, dates, startHour, endHour, banedCells } = req.body;
 
   try {
-    const savedTable = await tableService.createTable({ title, dates, startHour, endHour, banedCells });
+    const savedTable = await tableService.createTable(
+      { title, dates, startHour, endHour, banedCells },
+      { skipStats: req.isAdmin },
+    );
 
     res.status(200).json({
       success: true,

@@ -2,7 +2,16 @@ const visitService = require("../services/visitService");
 
 const trackVisit = async (req, res) => {
   const { page } = req.body;
-  
+
+  // 관리자 브라우저의 방문은 조회수 집계에서 제외한다.
+  if (req.isAdmin) {
+    return res.status(200).json({
+      success: true,
+      skipped: true,
+      message: "관리자 방문은 집계에서 제외됩니다.",
+    });
+  }
+
   const updateFields = {};
   if (page === "landing") {
     updateFields.todayVisitLandingPage = 1;

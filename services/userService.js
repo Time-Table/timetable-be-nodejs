@@ -5,7 +5,7 @@ const Schedule = require("../models/Schedule");
 const visitService = require("./visitService");
 const { calculateTimeInfo } = require("../utils/scheduleHelper");
 
-const joinTable = async (data) => {
+const joinTable = async (data, options = {}) => {
   const { tableId, name, password, availableTimes } = data;
 
   const tableData = await Table.findOne({ tableId });
@@ -21,7 +21,9 @@ const joinTable = async (data) => {
       throw { status: 401, message: "비밀번호가 일치하지 않습니다." };
     }
 
-    await visitService.updateVisitStats({ todayLogin: 1, totalLogin: 1 });
+    if (!options.skipStats) {
+      await visitService.updateVisitStats({ todayLogin: 1, totalLogin: 1 });
+    }
 
     return {
       isNewUser: false,
@@ -38,7 +40,10 @@ const joinTable = async (data) => {
 
   await user.save();
 
-  await visitService.updateVisitStats({ todaySignUp: 1, totalSignUp: 1 });
+  // 관리자 계정으로 테스트 참여한 건은 가입 카운터에 반영하지 않는다.
+  if (!options.skipStats) {
+    await visitService.updateVisitStats({ todaySignUp: 1, totalSignUp: 1 });
+  }
 
   return {
     isNewUser: true,

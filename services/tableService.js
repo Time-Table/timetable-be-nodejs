@@ -3,7 +3,7 @@ const User = require("../models/User");
 const { v4: uuid } = require("uuid");
 const visitService = require("./visitService");
 
-const createTable = async (data) => {
+const createTable = async (data, options = {}) => {
   const { title, dates, startHour, endHour, banedCells } = data;
   const tableId = uuid();
 
@@ -18,12 +18,15 @@ const createTable = async (data) => {
 
   const savedTable = await table.save();
 
-  const updateFields = {
-    todayTableCreateCount: 1,
-    totalTableCreateCount: 1,
-  };
+  // 관리자가 테스트로 만든 테이블은 생성 카운터에 반영하지 않는다.
+  if (!options.skipStats) {
+    const updateFields = {
+      todayTableCreateCount: 1,
+      totalTableCreateCount: 1,
+    };
 
-  await visitService.updateVisitStats(updateFields);
+    await visitService.updateVisitStats(updateFields);
+  }
 
   return savedTable;
 };

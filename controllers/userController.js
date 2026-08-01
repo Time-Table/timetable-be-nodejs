@@ -5,7 +5,10 @@ const join = async (req, res) => {
   const { tableId, name, password, availableTimes } = req.body;
 
   try {
-    const result = await userService.joinTable({ tableId, name, password, availableTimes });
+    const result = await userService.joinTable(
+      { tableId, name, password, availableTimes },
+      { skipStats: req.isAdmin },
+    );
 
     return res.status(200).json({
       success: true,
