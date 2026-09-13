@@ -29,6 +29,7 @@ const PROTECTED = [
   { method: "GET", path: "/api/admin/audience" },
   { method: "GET", path: "/api/admin/chats" },
   { method: "GET", path: "/api/admin/tables/any-id" },
+  { method: "GET", path: "/api/blog-views/stats" },
 ];
 
 /**
@@ -45,6 +46,12 @@ const PUBLIC = [
     path: "/api/events",
     why: "익명 퍼널 이벤트 수집",
     body: { name: "landing_view", visitorId: "test-visitor" },
+  },
+  {
+    method: "POST",
+    path: "/api/blog-views",
+    why: "익명 블로그 조회 기록 (slug·visitorId 형식 검증으로 오염 방지)",
+    body: { slug: "test-post", visitorId: "test-visitor" },
   },
   {
     method: "POST",

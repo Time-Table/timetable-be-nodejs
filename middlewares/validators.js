@@ -113,9 +113,28 @@ const validateScheduleAdd = (req, res, next) => {
   next();
 };
 
+const validateBlogView = (req, res, next) => {
+  const { slug, visitorId } = req.body;
+
+  if (typeof slug !== "string" || !VALIDATION_RULES.BLOG_SLUG.test(slug)) {
+    return res.status(400).json({ success: false, message: "slug 형식이 올바르지 않습니다." });
+  }
+
+  if (
+    typeof visitorId !== "string" ||
+    visitorId.length === 0 ||
+    visitorId.length > VALIDATION_RULES.VISITOR_ID.MAX_LENGTH
+  ) {
+    return res.status(400).json({ success: false, message: "visitorId가 올바르지 않습니다." });
+  }
+
+  next();
+};
+
 module.exports = {
   validateTableCreate,
   validateUserJoin,
   validateChatPost,
   validateScheduleAdd,
+  validateBlogView,
 };
