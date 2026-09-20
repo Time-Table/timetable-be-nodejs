@@ -10,8 +10,11 @@ const trackEvent = async (req, res) => {
   }
 
   try {
-    await eventService.recordEvent({ name, visitorId, tableId, source, device });
-    return res.status(200).json({ success: true });
+    const event = await eventService.recordEvent({ name, visitorId, tableId, source, device });
+    return res.status(200).json({
+      success: true,
+      ...(event?.tableRole ? { tableRole: event.tableRole } : {}),
+    });
   } catch (err) {
     Sentry.captureException(err);
     return res.status(500).json({ success: false, message: "서버 오류 발생" });

@@ -29,6 +29,12 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  // 기존 이벤트의 미설정 값도 집계할 때는 unknown으로 취급한다.
+  tableRole: {
+    type: String,
+    enum: ["creator", "participant", "unknown"],
+    required: false,
+  },
   // KST 기준 날짜. Visiter 모델과 같은 방식으로 일자별 조회에 쓴다.
   date: {
     type: String,

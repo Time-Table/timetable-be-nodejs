@@ -3,16 +3,38 @@ const Table = require("../models/Table");
 const User = require("../models/User");
 const moment = require("moment-timezone");
 const { TIMEZONE } = require("../utils/constants");
-const { EVENT_NAMES, FUNNELS, MATURITY_FUNNEL } = require("../utils/funnels");
+const { EVENTS, EVENT_NAMES, FUNNELS, MATURITY_FUNNEL } = require("../utils/funnels");
+
+const TABLE_EVENTS = [EVENTS.CREATE_SUCCESS, EVENTS.INVITE_SHARE, EVENTS.TABLE_VIEW,
+  EVENTS.JOIN_SUBMIT, EVENTS.JOIN_SUCCESS, EVENTS.SCHEDULE_SAVE, EVENTS.RANKING_OPEN];
+
+const resolveTableRole = async (tableId, visitorId) => {
+  if (!tableId) return "unknown";
+  try {
+    const table = await Table.findOne({ tableId }).select("+creatorVisitorId").lean();
+    if (!table?.creatorVisitorId) return "unknown";
+    return table.creatorVisitorId === visitorId ? "creator" : "participant";
+  } catch {
+    // 역할 조회 장애로 기존 이벤트까지 유실시키지 않는다.
+    return "unknown";
+  }
+};
 
 const recordEvent = async ({ name, visitorId, tableId, source, device }) => {
   // 정의되지 않은 이름은 저장하지 않는다. 오타나 외부 호출로 컬렉션이 오염되는 것을 막는다.
-  if (!EVENT_NAMES.includes(name) || !visitorId) return null;
+  if (!EVENT_NAMES.includes(name) || typeof visitorId !== "string" ||
+    visitorId.length === 0 || visitorId.length > 64) return null;
+
+  const validTableId = typeof tableId === "string" && tableId.length > 0 && tableId.length <= 64
+    ? tableId : undefined;
+  const tableRole = TABLE_EVENTS.includes(name)
+    ? await resolveTableRole(validTableId, visitorId) : undefined;
 
   return await Event.create({
     name,
     visitorId,
-    tableId,
+    tableId: validTableId,
+    tableRole,
     source: typeof source === "string" ? source.slice(0, 100) : undefined,
     device: ["mobile", "tablet", "desktop"].includes(device) ? device : undefined,
     date: moment().tz(TIMEZONE).format("YYYY-MM-DD"),
@@ -33,7 +55,8 @@ const startDateOf = (days) =>
     : null;
 
 /**
- * 이벤트 기반 퍼널. 앞 단계를 모두 거친 방문자만 다음 단계로 세는 순서 퍼널이다.
+ * 이벤트 기반 퍼널. 기간 내 앞 단계 이벤트가 모두 있는 방문자만 센다.
+ * 세션 및 발생 순서를 검사하지 않는 방문자 집계다.
  * reached는 앞 단계와 무관하게 그 이벤트를 발생시킨 방문자 수로,
  * completed와 크게 벌어지면 계측이 빠졌거나 중간 진입이 많다는 신호다.
  */

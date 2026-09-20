@@ -12,6 +12,13 @@ const tableSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    // 통계 전용. 생성 브라우저와 이후 표 이용을 연결하며 인증에 사용하지 않는다.
+    creatorVisitorId: {
+      type: String,
+      maxlength: 64,
+      immutable: true,
+      select: false,
+    },
     dates: [
       {
         type: String,
@@ -37,7 +44,15 @@ const tableSchema = new mongoose.Schema(
     //   required: false,
     // },
   },
-  { timestamps: true } // 영국 시간 기준
+  {
+    timestamps: true,
+    toJSON: {
+      transform: (_doc, value) => {
+        delete value.creatorVisitorId;
+        return value;
+      },
+    },
+  }
 );
 
 const Table = mongoose.model("Table", tableSchema);

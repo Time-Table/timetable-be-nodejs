@@ -4,7 +4,7 @@ const { v4: uuid } = require("uuid");
 const visitService = require("./visitService");
 
 const createTable = async (data, options = {}) => {
-  const { title, dates, startHour, endHour, banedCells } = data;
+  const { title, dates, startHour, endHour, banedCells, creatorVisitorId } = data;
   const tableId = uuid();
 
   const table = new Table({
@@ -14,6 +14,8 @@ const createTable = async (data, options = {}) => {
     startHour,
     endHour,
     banedCells,
+    creatorVisitorId: !options.skipStats && typeof creatorVisitorId === "string" &&
+      creatorVisitorId.length > 0 && creatorVisitorId.length <= 64 ? creatorVisitorId : undefined,
   });
 
   const savedTable = await table.save();
