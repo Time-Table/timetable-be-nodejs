@@ -1,15 +1,21 @@
 const Table = require("../models/Table");
 const User = require("../models/User");
+const activationService = require("./activationService");
+const { createSnapshot } = require("../utils/activationDefinition");
 const { v4: uuid } = require("uuid");
 const visitService = require("./visitService");
+const { runTelemetry } = require("../utils/telemetry");
 
 const createTable = async (data, options = {}) => {
   const { title, dates, startHour, endHour, banedCells, creatorVisitorId } = data;
   const tableId = uuid();
+  const createdAt = new Date();
 
   const table = new Table({
     title,
     tableId,
+    createdAt,
+    activationSnapshot: createSnapshot(data, createdAt, !!options.skipStats),
     dates,
     startHour,
     endHour,
@@ -27,7 +33,12 @@ const createTable = async (data, options = {}) => {
       totalTableCreateCount: 1,
     };
 
-    await visitService.updateVisitStats(updateFields);
+    await Promise.all([
+      runTelemetry("table_create_counter", () => visitService.updateVisitStats(updateFields)),
+      activationService.recordCreation(savedTable),
+    ]);
+  } else {
+    await activationService.recordCreation(savedTable);
   }
 
   return savedTable;
@@ -56,11 +67,15 @@ const getAllTables = async () => {
 };
 
 const updateTable = async (tableId, updateData) => {
-  return await Table.findOneAndUpdate({ tableId }, updateData, { new: true });
+  const table = await Table.findOneAndUpdate({ tableId }, updateData, { new: true }).select("+activationSnapshot");
+  await activationService.recordTableChange(table);
+  return table;
 };
 
 const deleteTable = async (tableId) => {
-  return await Table.findOneAndDelete({ tableId });
+  const table = await Table.findOneAndDelete({ tableId }).select("+activationSnapshot");
+  await activationService.recordTableChange(table);
+  return table;
 };
 
 module.exports = {

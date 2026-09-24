@@ -5,7 +5,7 @@ const addSchedule = async (req, res) => {
   const { tableId, name, availableTimes } = req.body;
 
   try {
-    const result = await scheduleService.addSchedule({ tableId, name, availableTimes });
+    const result = await scheduleService.addSchedule({ tableId, name, availableTimes }, { skipStats: req.isAdmin });
 
     res.status(200).json({
       success: true,

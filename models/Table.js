@@ -19,6 +19,15 @@ const tableSchema = new mongoose.Schema(
       immutable: true,
       select: false,
     },
+    // Server-owned creation snapshot. Never expose or accept it over the public API.
+    activationSnapshot: {
+      type: new mongoose.Schema({
+        version: Number, createdAt: Date, deadlineAt: Date, excludedReason: String,
+        keySalt: String, scheduleFingerprint: String,
+      }, { _id: false }),
+      immutable: true,
+      select: false,
+    },
     dates: [
       {
         type: String,
@@ -49,6 +58,7 @@ const tableSchema = new mongoose.Schema(
     toJSON: {
       transform: (_doc, value) => {
         delete value.creatorVisitorId;
+        delete value.activationSnapshot;
         return value;
       },
     },

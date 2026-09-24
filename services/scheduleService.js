@@ -1,8 +1,9 @@
 const User = require("../models/User");
+const activationService = require("./activationService");
 const Schedule = require("../models/Schedule");
 const { calculateTimeInfo, calculateSimpleTimeInfo } = require("../utils/scheduleHelper");
 
-const addSchedule = async (data) => {
+const addSchedule = async (data, options = {}) => {
   const { tableId, name, availableTimes } = data;
 
   const user = await User.findOneAndUpdate(
@@ -19,6 +20,10 @@ const addSchedule = async (data) => {
   const timeInfo = calculateTimeInfo(users);
 
   await Schedule.findOneAndUpdate({ tableId }, { timeInfo }, { upsert: true });
+
+  if (!options.skipStats) {
+    await activationService.recordSchedule({ tableId, name, availableTimes: user.availableTimes, completedAt: new Date() });
+  }
 
   return { userAvailableTimes: user.availableTimes, scheduleTimeInfo: timeInfo };
 };

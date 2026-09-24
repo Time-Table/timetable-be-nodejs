@@ -1,5 +1,7 @@
 const eventService = require("../services/eventService");
 const Sentry = require("@sentry/node");
+const activationReportService = require("../services/activationReportService");
+const { runTelemetry } = require("../utils/telemetry");
 
 const trackEvent = async (req, res) => {
   const { name, visitorId, tableId, source, device } = req.body;
@@ -27,7 +29,11 @@ const getFunnels = async (req, res) => {
 
   try {
     const report = await eventService.getFunnelReport(days);
-    return res.status(200).json({ success: true, data: report });
+    const metrics = await runTelemetry("activation_report", () => activationReportService.getReport(days), { waitMs: 2000 });
+    return res.status(200).json({
+      success: true,
+      data: { ...report, metricsV2: metrics.ok ? metrics.value : { version: 1, status: "unavailable" } },
+    });
   } catch (err) {
     Sentry.captureException(err);
     return res.status(500).json({ success: false, message: "서버 오류 발생" });

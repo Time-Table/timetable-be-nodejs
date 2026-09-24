@@ -3,6 +3,7 @@ const DeletedUser = require("../models/DeletedUser");
 const Table = require("../models/Table");
 const Schedule = require("../models/Schedule");
 const visitService = require("./visitService");
+const { runTelemetry } = require("../utils/telemetry");
 const { calculateTimeInfo } = require("../utils/scheduleHelper");
 
 const joinTable = async (data, options = {}) => {
@@ -22,7 +23,7 @@ const joinTable = async (data, options = {}) => {
     }
 
     if (!options.skipStats) {
-      await visitService.updateVisitStats({ todayLogin: 1, totalLogin: 1 });
+      await runTelemetry("login_counter", () => visitService.updateVisitStats({ todayLogin: 1, totalLogin: 1 }));
     }
 
     return {
@@ -42,7 +43,7 @@ const joinTable = async (data, options = {}) => {
 
   // 관리자 계정으로 테스트 참여한 건은 가입 카운터에 반영하지 않는다.
   if (!options.skipStats) {
-    await visitService.updateVisitStats({ todaySignUp: 1, totalSignUp: 1 });
+    await runTelemetry("join_counter", () => visitService.updateVisitStats({ todaySignUp: 1, totalSignUp: 1 }));
   }
 
   return {
