@@ -1,6 +1,6 @@
 const User = require("../models/User");
 const DeletedUser = require("../models/DeletedUser");
-const Table = require("../models/Table");
+const tableMutation = require("./tableMutation");
 const Schedule = require("../models/Schedule");
 const visitService = require("./visitService");
 const { runTelemetry } = require("../utils/telemetry");
@@ -9,47 +9,28 @@ const { calculateTimeInfo } = require("../utils/scheduleHelper");
 const joinTable = async (data, options = {}) => {
   const { tableId, name, password, availableTimes } = data;
 
-  const tableData = await Table.findOne({ tableId });
-  if (!tableData) {
-    throw { status: 404, message: "테이블을 찾을 수 없습니다." };
-  }
-
-  const existingUser = await User.findOne({ tableId, name }).select("+password");
-
-  if (existingUser) {
-    const isMatch = await existingUser.comparePassword(password);
-    if (!isMatch) {
-      throw { status: 401, message: "비밀번호가 일치하지 않습니다." };
+  const result = await tableMutation.withTableMutation(tableId, async (session) => {
+    const existingUser = await User.findOne({ tableId, name }).select("+password").session(session);
+    if (existingUser) {
+      if (!await existingUser.comparePassword(password)) {
+        throw { status: 401, message: "비밀번호가 일치하지 않습니다." };
+      }
+      return { isNewUser: false, user: { name: existingUser.name, availableTimes: existingUser.availableTimes } };
     }
-
-    if (!options.skipStats) {
-      await runTelemetry("login_counter", () => visitService.updateVisitStats({ todayLogin: 1, totalLogin: 1 }));
-    }
-
-    return {
-      isNewUser: false,
-      user: { name: existingUser.name, availableTimes: existingUser.availableTimes },
-    };
-  }
-
-  const user = new User({
-    tableId,
-    name,
-    password,
-    availableTimes,
+    const user = new User({ tableId, name, password, availableTimes });
+    await user.save({ session });
+    return { isNewUser: true, user: { name: user.name, availableTimes: user.availableTimes } };
   });
 
-  await user.save();
-
-  // 관리자 계정으로 테스트 참여한 건은 가입 카운터에 반영하지 않는다.
+  // Counters run once, after commit; a transaction retry must not replay telemetry.
   if (!options.skipStats) {
-    await runTelemetry("join_counter", () => visitService.updateVisitStats({ todaySignUp: 1, totalSignUp: 1 }));
+    const counterFields = result.isNewUser
+      ? { todaySignUp: 1, totalSignUp: 1 }
+      : { todayLogin: 1, totalLogin: 1 };
+    await runTelemetry(result.isNewUser ? "join_counter" : "login_counter",
+      () => visitService.updateVisitStats(counterFields));
   }
-
-  return {
-    isNewUser: true,
-    user: { name: user.name, availableTimes: user.availableTimes },
-  };
+  return result;
 };
 
 const getUserInfo = async (tableId, name, password) => {
@@ -71,30 +52,19 @@ const getAllUsers = async (tableId) => {
 const deleteUser = async (data) => {
   const { tableId, name, password } = data;
 
-  const user = await User.findOne({ tableId, name }).select("+password");
-
-  if (!user) {
-    throw { status: 404, message: "유저를 찾을 수 없습니다." };
-  }
-
-  const isMatch = await user.comparePassword(password);
-  if (!isMatch) {
-    throw { status: 401, message: "비밀번호가 일치하지 않습니다." };
-  }
-
-  const { availableTimes, _id } = user;
-
-  const deletedUser = new DeletedUser({ tableId, name, userId: _id, availableTimes });
-  await deletedUser.save();
-
-  await User.findOneAndDelete({ tableId, name });
-
-  const users = await User.find({ tableId });
-  const updatedTimeInfo = calculateTimeInfo(users);
-
-  await Schedule.findOneAndUpdate({ tableId }, { timeInfo: updatedTimeInfo }, { upsert: true });
-
-  return true;
+  return tableMutation.withTableMutation(tableId, async (session) => {
+    const user = await User.findOne({ tableId, name }).select("+password").session(session);
+    if (!user) throw { status: 404, message: "유저를 찾을 수 없습니다." };
+    if (!await user.comparePassword(password)) throw { status: 401, message: "비밀번호가 일치하지 않습니다." };
+    const { availableTimes, _id } = user;
+    const deletedUser = new DeletedUser({ tableId, name, userId: _id, availableTimes });
+    await deletedUser.save({ session });
+    await User.findOneAndDelete({ tableId, name }, { session });
+    const users = await User.find({ tableId }).session(session);
+    const updatedTimeInfo = calculateTimeInfo(users);
+    await Schedule.findOneAndUpdate({ tableId }, { timeInfo: updatedTimeInfo }, { upsert: true, session });
+    return true;
+  });
 };
 
 module.exports = {

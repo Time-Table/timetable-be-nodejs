@@ -7,6 +7,7 @@ const User = require("../models/User");
 const visitService = require("../services/visitService");
 const tableService = require("../services/tableService");
 const userService = require("../services/userService");
+const tableMutation = require("../services/tableMutation");
 
 const data = { title: "test", dates: ["2099-01-01"], startHour: "09:00", endHour: "18:00" };
 
@@ -17,10 +18,10 @@ test("통계·로그 예외가 생성·신규 참여·재로그인 성공을 뒤
   t.mock.method(Table.prototype, "save", async function () { return this; });
   const created = await tableService.createTable(data);
   assert.ok(created.tableId);
-  t.mock.method(Table, "findOne", async () => created);
+  t.mock.method(tableMutation, "withTableMutation", async (_, write) => write(null));
   t.mock.method(User.prototype, "save", async function () { return this; });
   let existing = null;
-  t.mock.method(User, "findOne", () => ({ select: async () => existing }));
+  t.mock.method(User, "findOne", () => ({ select: () => ({ session: async () => existing }) }));
   assert.equal((await userService.joinTable({ tableId: created.tableId, name: "a", password: "1234" })).isNewUser, true);
   existing = { name: "a", availableTimes: [], comparePassword: async () => true };
   assert.equal((await userService.joinTable({ tableId: created.tableId, name: "a", password: "1234" })).isNewUser, false);
@@ -34,8 +35,8 @@ test("업무 저장·인증 실패는 계속 실패하며 통계를 쓰지 않�
   const stats = t.mock.method(visitService, "updateVisitStats", async () => {});
   t.mock.method(Table.prototype, "save", async () => { throw new Error("core failed"); });
   await assert.rejects(tableService.createTable(data), /core failed/);
-  t.mock.method(Table, "findOne", async () => ({}));
-  t.mock.method(User, "findOne", () => ({ select: async () => ({ comparePassword: async () => false }) }));
+  t.mock.method(tableMutation, "withTableMutation", async (_, write) => write(null));
+  t.mock.method(User, "findOne", () => ({ select: () => ({ session: async () => ({ comparePassword: async () => false }) }) }));
   await assert.rejects(userService.joinTable({ tableId: "t", name: "a", password: "bad" }), (e) => e.status === 401);
   assert.equal(stats.mock.callCount(), 0);
 });

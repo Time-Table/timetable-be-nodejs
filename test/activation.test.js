@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createSnapshot, hasValidCell, participantKey } = require("../utils/activationDefinition");
 const activationService = require("../services/activationService");
+const tableMutation = require("../services/tableMutation");
 const scheduleService = require("../services/scheduleService");
 const User = require("../models/User");
 const Schedule = require("../models/Schedule");
@@ -36,8 +37,9 @@ test("빈 입력·임의 문자열·금지 셀·범위 밖은 제외하고 실�
 });
 
 test("전체 일정 저장 성공 이후에만 기록하며 관리자 입력은 제외한다", async (t) => {
+  t.mock.method(tableMutation, "withTableMutation", async (_, write) => write(null));
   t.mock.method(User, "findOneAndUpdate", async () => ({ availableTimes: ["2026-09-26-09:00"] }));
-  t.mock.method(User, "find", async () => []);
+  t.mock.method(User, "find", () => ({ session: async () => [] }));
   let fail = true;
   t.mock.method(Schedule, "findOneAndUpdate", async () => { if (fail) throw new Error("schedule failure"); });
   const metric = t.mock.method(activationService, "recordSchedule", async (value) => {

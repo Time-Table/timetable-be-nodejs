@@ -2,7 +2,7 @@
 // Always creates a fresh loopback database; never accepts a database URI.
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { MongoMemoryServer } = require('mongodb-memory-server');
+const { MongoMemoryReplSet } = require('mongodb-memory-server');
 const mongoose = require('mongoose');
 const Table = require('../models/Table');
 const User = require('../models/User');
@@ -23,7 +23,7 @@ const now = new Date('2026-10-01T00:00:00Z');
 const cell = '2026-09-30-09:00';
 let mongo;
 test.before(async () => {
-  mongo = await MongoMemoryServer.create({ instance: { ip: '127.0.0.1' } });
+  mongo = await MongoMemoryReplSet.create({ replSet: { count: 1, ip: '127.0.0.1', storageEngine: 'wiredTiger' } });
   await mongoose.connect(mongo.getUri('activation_test'));
   await Promise.all([Table.init(), Ledger.init(), User.init(), Schedule.init()]);
 });

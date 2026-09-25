@@ -1,4 +1,8 @@
+const mongoose = require("mongoose");
 const Table = require("../models/Table");
+const Schedule = require("../models/Schedule");
+const DeletedUser = require("../models/DeletedUser");
+const Chat = require("../models/Chat");
 const User = require("../models/User");
 const activationService = require("./activationService");
 const { createSnapshot } = require("../utils/activationDefinition");
@@ -73,7 +77,16 @@ const updateTable = async (tableId, updateData) => {
 };
 
 const deleteTable = async (tableId) => {
-  const table = await Table.findOneAndDelete({ tableId }).select("+activationSnapshot");
+  const table = await mongoose.connection.transaction(async (session) => {
+    const deleted = await Table.findOneAndDelete({ tableId }, { session }).select("+activationSnapshot");
+    if (!deleted) return null;
+    // Sequential operations: the driver does not support parallel work in a transaction.
+    await User.deleteMany({ tableId }, { session });
+    await Schedule.deleteMany({ tableId }, { session });
+    await DeletedUser.deleteMany({ tableId }, { session });
+    await Chat.deleteMany({ tableId }, { session });
+    return deleted;
+  });
   await activationService.recordTableChange(table);
   return table;
 };

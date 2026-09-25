@@ -1,27 +1,16 @@
 const Chat = require("../models/Chat");
-const Table = require("../models/Table");
+const { withTableMutation } = require("./tableMutation");
 
 const postChat = async (data) => {
   const { tableId, name, message } = data;
 
-  const tableData = await Table.findOne({ tableId });
-  if (!tableData) {
-    throw { status: 404, message: "테이블을 찾을 수 없습니다." };
-  }
-
-  const newMessage = {
-    name,
-    message,
-    timestamp: new Date(),
-  };
-
-  await Chat.findOneAndUpdate(
-    { tableId },
-    { $push: { chats: newMessage } },
-    { upsert: true, new: true }
-  );
-
-  return true;
+  return withTableMutation(tableId, async (session) => {
+    const newMessage = { name, message, timestamp: new Date() };
+    await Chat.findOneAndUpdate(
+      { tableId }, { $push: { chats: newMessage } }, { upsert: true, new: true, session }
+    );
+    return true;
+  });
 };
 
 const getChats = async (tableId) => {

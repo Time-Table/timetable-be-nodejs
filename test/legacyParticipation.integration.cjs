@@ -1,7 +1,7 @@
 // Local Mongo only, same harness as activation.integration.cjs; no external URI accepted.
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { MongoMemoryServer } = require("mongodb-memory-server");
+const { MongoMemoryReplSet } = require("mongodb-memory-server");
 const mongoose = require("mongoose");
 const Table = require("../models/Table");
 const User = require("../models/User");
@@ -15,7 +15,7 @@ const cutoff = new Date("2026-09-25T15:00:00Z");
 const now = new Date("2026-09-26T01:00:00Z");
 let mongo;
 test.before(async () => {
-  mongo = await MongoMemoryServer.create({ instance: { ip: "127.0.0.1" } });
+  mongo = await MongoMemoryReplSet.create({ replSet: { count: 1, ip: "127.0.0.1", storageEngine: "wiredTiger" } });
   await mongoose.connect(mongo.getUri("legacy_participation_test"));
   await Table.init();
 });
