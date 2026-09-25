@@ -89,3 +89,17 @@ test("참여 KPI 조회 실패는 기존 입력 지표와 퍼널에 전파하지
   assert.equal(body.data.metricsV2.status, "ok");
   assert.deepEqual(body.data.participationMetrics, { version: 1, status: "unavailable" });
 });
+
+test("참여 집계는 운영 서버의 2초 초과 응답도 제한 내에서 정상 반환한다", async (t) => {
+  t.mock.method(console, "info", () => {});
+  t.mock.method(eventService, "getFunnelReport", async () => ({ funnels: [] }));
+  t.mock.method(activationReportService, "getReport", async () => ({ version: 1, status: "ok" }));
+  t.mock.method(participationReportService, "getReport", () => new Promise((resolve) =>
+    setTimeout(() => resolve({ version: 1, status: "ok", definition: "current_registration_before_deadline" }), 2100)));
+  let status, body;
+  const res = { status(value) { status = value; return this; }, json(value) { body = value; return this; } };
+  await getFunnels({ query: { days: "0" } }, res);
+  assert.equal(status, 200);
+  assert.equal(body.data.participationMetrics.status, "ok");
+  assert.equal(body.data.metricsV2.status, "ok");
+});

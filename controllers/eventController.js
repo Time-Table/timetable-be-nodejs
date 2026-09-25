@@ -32,7 +32,7 @@ const getFunnels = async (req, res) => {
     const report = await eventService.getFunnelReport(days);
     const [metrics, participation] = await Promise.all([
       runTelemetry("activation_report", () => activationReportService.getReport(days), { waitMs: 2000 }),
-      runTelemetry("participation_report", () => participationReportService.getReport(days), { waitMs: 2000 }),
+      runTelemetry("participation_report", () => participationReportService.getReport(days), { waitMs: 5000 }),
     ]);
     return res.status(200).json({
       success: true,
