@@ -9,6 +9,7 @@ const Table = require("../models/Table");
 const TableActivation = require("../models/TableActivation");
 const eventService = require("../services/eventService");
 const activationReportService = require("../services/activationReportService");
+const participationReportService = require("../services/participationReportService");
 const { getFunnels } = require("../controllers/eventController");
 const data = { dates: ["2026-09-26", "2026-09-25"], startHour: "09:00", endHour: "24:00", banedCells: ["2026-09-26-10:30"] };
 const createdAt = new Date("2026-09-24T00:00:00Z");
@@ -65,10 +66,26 @@ test("지표 조회 실패도 기존 퍼널 응답·성공 코드를 유지한�
   const legacy = { funnels: [{ key: "creation", entered: 2 }], startDate: "2026-09-01" };
   t.mock.method(eventService, "getFunnelReport", async () => legacy);
   t.mock.method(activationReportService, "getReport", async () => { throw new Error("v2 offline"); });
+  t.mock.method(participationReportService, "getReport", async () => ({ version: 1, status: "ok" }));
   let status, body;
   const res = { status(value) { status = value; return this; }, json(value) { body = value; return this; } };
   await getFunnels({ query: { days: "30" } }, res);
   assert.equal(status, 200);
   assert.deepEqual(body.data.funnels, legacy.funnels);
   assert.deepEqual(body.data.metricsV2, { version: 1, status: "unavailable" });
+  assert.deepEqual(body.data.participationMetrics, { version: 1, status: "ok" });
+});
+
+test("참여 KPI 조회 실패는 기존 입력 지표와 퍼널에 전파하지 않는다", async (t) => {
+  t.mock.method(console, "info", () => {});
+  t.mock.method(eventService, "getFunnelReport", async () => ({ funnels: [{ key: "creation" }] }));
+  t.mock.method(activationReportService, "getReport", async () => ({ version: 1, status: "ok" }));
+  t.mock.method(participationReportService, "getReport", async () => { throw new Error("legacy offline"); });
+  let status, body;
+  const res = { status(value) { status = value; return this; }, json(value) { body = value; return this; } };
+  await getFunnels({ query: { days: "30" } }, res);
+  assert.equal(status, 200);
+  assert.deepEqual(body.data.funnels, [{ key: "creation" }]);
+  assert.equal(body.data.metricsV2.status, "ok");
+  assert.deepEqual(body.data.participationMetrics, { version: 1, status: "unavailable" });
 });

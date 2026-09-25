@@ -1,6 +1,7 @@
 const eventService = require("../services/eventService");
 const Sentry = require("@sentry/node");
 const activationReportService = require("../services/activationReportService");
+const participationReportService = require("../services/participationReportService");
 const { runTelemetry } = require("../utils/telemetry");
 
 const trackEvent = async (req, res) => {
@@ -29,10 +30,17 @@ const getFunnels = async (req, res) => {
 
   try {
     const report = await eventService.getFunnelReport(days);
-    const metrics = await runTelemetry("activation_report", () => activationReportService.getReport(days), { waitMs: 2000 });
+    const [metrics, participation] = await Promise.all([
+      runTelemetry("activation_report", () => activationReportService.getReport(days), { waitMs: 2000 }),
+      runTelemetry("participation_report", () => participationReportService.getReport(days), { waitMs: 2000 }),
+    ]);
     return res.status(200).json({
       success: true,
-      data: { ...report, metricsV2: metrics.ok ? metrics.value : { version: 1, status: "unavailable" } },
+      data: {
+        ...report,
+        metricsV2: metrics.ok ? metrics.value : { version: 1, status: "unavailable" },
+        participationMetrics: participation.ok ? participation.value : { version: 1, status: "unavailable" },
+      },
     });
   } catch (err) {
     Sentry.captureException(err);
