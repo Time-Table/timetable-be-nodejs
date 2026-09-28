@@ -58,8 +58,17 @@ const listInquiries = async (limit) => {
 
   return {
     total,
-    inquiries: rows.map(({ _id, __v, ...row }) => ({ id: String(_id), ...row })),
+    inquiries: rows.map(({ _id, __v, ...row }) => ({ id: String(_id), status: "new", ...row })),
   };
 };
 
-module.exports = { buildContext, createInquiry, listInquiries };
+/** 처리 상태를 바꾼다. 없는 문의면 null. */
+const updateInquiryStatus = async (id, status) => {
+  const row = await Inquiry.findByIdAndUpdate(id, { status }, { new: true, runValidators: true }).lean();
+  return row ? { id: String(row._id), status: row.status } : null;
+};
+
+/** 문의를 지운다. 되돌릴 수 없다. 없는 문의면 false. */
+const deleteInquiry = async (id) => Boolean(await Inquiry.findByIdAndDelete(id));
+
+module.exports = { buildContext, createInquiry, listInquiries, updateInquiryStatus, deleteInquiry };

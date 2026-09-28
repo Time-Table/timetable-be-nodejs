@@ -30,6 +30,8 @@ const PROTECTED = [
   { method: "GET", path: "/api/admin/chats" },
   { method: "GET", path: "/api/admin/tables/any-id" },
   { method: "GET", path: "/api/admin/inquiries" },
+  { method: "PATCH", path: "/api/admin/inquiries/any-id", param: "inquiryId" },
+  { method: "DELETE", path: "/api/admin/inquiries/any-id", param: "inquiryId" },
   { method: "GET", path: "/api/blog-views/stats" },
 ];
 
@@ -150,9 +152,9 @@ const collectRoutes = () => {
   return found;
 };
 
-/** 인벤토리 항목을 실제 등록 경로 표기로 되돌린다. */
-const toTemplate = ({ method, path }) =>
-  `${method} ${path.split("?")[0].replace(/any-id/, ":tableId")}`.replace(/\/$/, "");
+/** 인벤토리 항목을 실제 등록 경로 표기로 되돌린다. 경로 변수 이름이 tableId가 아니면 param으로 적는다. */
+const toTemplate = ({ method, path, param = "tableId" }) =>
+  `${method} ${path.split("?")[0].replace(/any-id/, `:${param}`)}`.replace(/\/$/, "");
 
 test("모든 라우트가 인벤토리에 분류되어 있다 (fail-closed)", () => {
   const registered = new Set(collectRoutes());

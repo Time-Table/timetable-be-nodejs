@@ -67,6 +67,9 @@ const VALIDATION_RULES = {
     DETAIL_MIN_LENGTH: 10,
     DETAIL_MAX_LENGTH: 2000,
     HOPE_MAX_LENGTH: 1000,
+    // 관리자 문의함의 처리 상태. FE src/page/manager/InquiryFeed.jsx의 INQUIRY_STATUSES와 짝이다.
+    // 순서대로 새 문의·예정·완료·보류·무시(2026-09-28 사용자 결정).
+    STATUSES: ["new", "planned", "done", "onHold", "ignored"],
   },
   TIME_FORMAT: /^([01]\d|2[0-3]):([0-5]\d)$|^24:00$/, // HH:mm format, allowing 24:00
   DATE_FORMAT: /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD format

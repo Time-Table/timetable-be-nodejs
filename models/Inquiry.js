@@ -16,6 +16,8 @@ const inquirySchema = new mongoose.Schema({
   summary: { type: String, required: true },
   detail: { type: String, required: true },
   hope: { type: String, required: false },
+  // 관리자가 문의함에서 고르는 처리 상태. 이 필드가 생기기 전에 들어온 문의는 값이 없고, 조회 때 "new"로 본다.
+  status: { type: String, enum: VALIDATION_RULES.INQUIRY.STATUSES, default: "new" },
   context: {
     // localStorage의 참여 이름. 마지막으로 들어간 표 하나의 것만 남아 있어 tableId와 짝으로 둔다.
     name: { type: String, required: false },

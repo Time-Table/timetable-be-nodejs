@@ -174,3 +174,34 @@ test("buildContext 는 형식이 맞는 값만 남기고 틀린 값은 문의를
 test("문의는 받은 날부터 10년(3,650일) 뒤 자동 삭제된다", () => {
   assert.equal(Inquiry.schema.path("createdAt").options.expires, 60 * 60 * 24 * 3650);
 });
+
+test("문의 처리 상태는 새 문의·예정·완료·보류·무시이고 기본값은 새 문의다", () => {
+  const status = Inquiry.schema.path("status");
+  assert.deepEqual(status.enumValues, ["new", "planned", "done", "onHold", "ignored"]);
+  assert.equal(status.options.default, "new");
+});
+
+test("문의 상태 변경·삭제는 ID와 상태 형식이 틀리면 DB에 닿기 전에 400을 준다", async (t) => {
+  const { base, close } = await startTestServer();
+  t.after(close);
+
+  const admin = { "Content-Type": "application/json", "X-Admin-Token": process.env.ADMIN_TOKEN };
+  const patch = (id, body) =>
+    fetch(`${base}/api/admin/inquiries/${id}`, { method: "PATCH", headers: admin, body: JSON.stringify(body) });
+  const validId = "0123456789abcdef01234567";
+
+  // mongoose.isValidObjectId는 아무 12자 문자열도 통과시키므로 24자리 16진수만 받는지 본다.
+  for (const id of ["any-id", "aaaaaaaaaaaa", `${validId}0`, "..%2F..%2Fx"]) {
+    const res = await patch(id, { status: "done" });
+    assert.equal(res.status, 400, `${id} 가 400이 아닙니다`);
+    assert.match((await res.json()).message, /ID/);
+    const del = await fetch(`${base}/api/admin/inquiries/${id}`, { method: "DELETE", headers: admin });
+    assert.equal(del.status, 400, `DELETE ${id} 가 400이 아닙니다`);
+  }
+
+  for (const body of [{}, { status: "finished" }, { status: ["done"] }, { status: { $ne: "new" } }]) {
+    const res = await patch(validId, body);
+    assert.equal(res.status, 400, `${JSON.stringify(body)} 가 400이 아닙니다`);
+    assert.match((await res.json()).message, /상태/);
+  }
+});

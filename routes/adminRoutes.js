@@ -17,5 +17,7 @@ router.get("/audience", analyticsController.getAudience);
 router.get("/chats", analyticsController.getChatFeed);
 router.get("/tables/:tableId", analyticsController.getTableDetail);
 router.get("/inquiries", inquiryController.getInquiries);
+router.patch("/inquiries/:inquiryId", inquiryController.updateInquiryStatus);
+router.delete("/inquiries/:inquiryId", inquiryController.deleteInquiry);
 
 module.exports = router;
