@@ -29,6 +29,13 @@ const eventSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
+  // 생성 경로(2026-09-29 랜딩 A/B). 생성 퍼널 이벤트에서 랜딩 폼과 빠른 생성을 나눈다.
+  // 이 필드를 넣기 전 이벤트와 헤더 외 경로에는 없다. 집계할 때는 없음으로 따로 센다.
+  creationPath: {
+    type: String,
+    enum: ["landing", "quick_create"],
+    required: false,
+  },
   // 기존 이벤트의 미설정 값도 집계할 때는 unknown으로 취급한다.
   tableRole: {
     type: String,

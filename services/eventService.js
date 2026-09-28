@@ -20,7 +20,10 @@ const resolveTableRole = async (tableId, visitorId) => {
   }
 };
 
-const recordEvent = async ({ name, visitorId, tableId, source, device }) => {
+const CREATION_EVENTS = [EVENTS.CREATE_VIEW, EVENTS.CREATE_CTA_CLICK, EVENTS.CREATE_SUBMIT, EVENTS.CREATE_SUCCESS];
+const CREATION_PATHS = ["landing", "quick_create"];
+
+const recordEvent = async ({ name, visitorId, tableId, source, device, creationPath }) => {
   // 정의되지 않은 이름은 저장하지 않는다. 오타나 외부 호출로 컬렉션이 오염되는 것을 막는다.
   if (!EVENT_NAMES.includes(name) || typeof visitorId !== "string" ||
     visitorId.length === 0 || visitorId.length > 64) return null;
@@ -37,6 +40,8 @@ const recordEvent = async ({ name, visitorId, tableId, source, device }) => {
     tableRole,
     source: typeof source === "string" ? source.slice(0, 100) : undefined,
     device: ["mobile", "tablet", "desktop"].includes(device) ? device : undefined,
+    // 생성 퍼널 이벤트에만 둔다. 다른 이벤트에 붙어 오거나 모르는 값이면 버린다.
+    creationPath: CREATION_EVENTS.includes(name) && CREATION_PATHS.includes(creationPath) ? creationPath : undefined,
     date: moment().tz(TIMEZONE).format("YYYY-MM-DD"),
   });
 };

@@ -5,7 +5,7 @@ const participationReportService = require("../services/participationReportServi
 const { runTelemetry } = require("../utils/telemetry");
 
 const trackEvent = async (req, res) => {
-  const { name, visitorId, tableId, source, device } = req.body;
+  const { name, visitorId, tableId, source, device, creationPath } = req.body;
 
   // 관리자 브라우저의 행동은 퍼널 집계에서 제외한다.
   if (req.isAdmin) {
@@ -13,7 +13,7 @@ const trackEvent = async (req, res) => {
   }
 
   try {
-    const event = await eventService.recordEvent({ name, visitorId, tableId, source, device });
+    const event = await eventService.recordEvent({ name, visitorId, tableId, source, device, creationPath });
     return res.status(200).json({
       success: true,
       ...(event?.tableRole ? { tableRole: event.tableRole } : {}),
