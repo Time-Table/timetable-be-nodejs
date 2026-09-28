@@ -32,6 +32,8 @@ const PROTECTED = [
   { method: "GET", path: "/api/admin/inquiries" },
   { method: "PATCH", path: "/api/admin/inquiries/any-id", param: "inquiryId" },
   { method: "DELETE", path: "/api/admin/inquiries/any-id", param: "inquiryId" },
+  { method: "GET", path: "/api/admin/experiments/landing-ab" },
+  { method: "POST", path: "/api/admin/experiments/landing-ab/stop" },
   { method: "GET", path: "/api/blog-views/stats" },
 ];
 
