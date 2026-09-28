@@ -11,6 +11,7 @@ const chatRoutes = require("./chatRoutes");
 const eventRoutes = require("./eventRoutes");
 const adminRoutes = require("./adminRoutes");
 const blogViewRoutes = require("./blogViewRoutes");
+const inquiryRoutes = require("./inquiryRoutes");
 
 router.use(generalLimiter);
 router.use(detectAdminMode);
@@ -23,5 +24,6 @@ router.use("/chats", chatRoutes);
 router.use("/events", eventRoutes);
 router.use("/admin", adminRoutes);
 router.use("/blog-views", blogViewRoutes);
+router.use("/inquiries", inquiryRoutes);
 
 module.exports = router;

@@ -32,6 +32,9 @@ const RATE_LIMIT = {
   BLOG_VIEW_WINDOW_MS: 1 * 60 * 1000,
   BLOG_VIEW_VISITOR_MAX: 20,
   BLOG_VIEW_IP_MAX: 120,
+  // 문의는 한 사람이 10분에 3건이면 충분하다. 받는 곳이 DB라 봇이 쌓는 것을 막는다.
+  INQUIRY_WINDOW_MS: 10 * 60 * 1000,
+  INQUIRY_MAX: 3,
 };
 
 const VALIDATION_RULES = {
@@ -55,6 +58,16 @@ const VALIDATION_RULES = {
   // 블로그 조회 기록. slug는 blogPosts.js의 slug 형식(소문자·숫자·하이픈)만 받는다.
   BLOG_SLUG: /^[a-z0-9-]{1,80}$/,
   VISITOR_ID: { MAX_LENGTH: 64 },
+  // 문의 양식. FE src/page/contact/inquiry.js의 INQUIRY_CATEGORIES·LIMITS와 짝이다.
+  INQUIRY: {
+    CATEGORIES: ["bug", "suggestion", "partnership", "other"],
+    EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+    EMAIL_MAX_LENGTH: 254,
+    SUMMARY_MAX_LENGTH: 100,
+    DETAIL_MIN_LENGTH: 10,
+    DETAIL_MAX_LENGTH: 2000,
+    HOPE_MAX_LENGTH: 1000,
+  },
   TIME_FORMAT: /^([01]\d|2[0-3]):([0-5]\d)$|^24:00$/, // HH:mm format, allowing 24:00
   DATE_FORMAT: /^\d{4}-\d{2}-\d{2}$/, // YYYY-MM-DD format
 };

@@ -29,6 +29,7 @@ const PROTECTED = [
   { method: "GET", path: "/api/admin/audience" },
   { method: "GET", path: "/api/admin/chats" },
   { method: "GET", path: "/api/admin/tables/any-id" },
+  { method: "GET", path: "/api/admin/inquiries" },
   { method: "GET", path: "/api/blog-views/stats" },
 ];
 
@@ -52,6 +53,17 @@ const PUBLIC = [
     path: "/api/blog-views",
     why: "익명 블로그 조회 기록 (slug·visitorId 형식 검증으로 오염 방지)",
     body: { slug: "test-post", visitorId: "test-visitor" },
+  },
+  {
+    method: "POST",
+    path: "/api/inquiries",
+    why: "누구나 문의 작성 (IP당 10분 3건·형식 검증, 조회는 관리자 전용)",
+    body: {
+      category: "bug",
+      email: "user@example.com",
+      summary: "검증",
+      detail: "인증 경계 검증용 문의입니다.",
+    },
   },
   {
     method: "POST",

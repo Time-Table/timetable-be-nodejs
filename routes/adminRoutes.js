@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
 const analyticsController = require("../controllers/analyticsController");
+const inquiryController = require("../controllers/inquiryController");
 const { requireAdmin } = require("../middlewares/adminAuth");
 const { adminLoginLimiter } = require("../middlewares/rateLimiters");
 
@@ -15,5 +16,6 @@ router.get("/trends", analyticsController.getTrends);
 router.get("/audience", analyticsController.getAudience);
 router.get("/chats", analyticsController.getChatFeed);
 router.get("/tables/:tableId", analyticsController.getTableDetail);
+router.get("/inquiries", inquiryController.getInquiries);
 
 module.exports = router;

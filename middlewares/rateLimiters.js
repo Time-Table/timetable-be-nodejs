@@ -59,10 +59,23 @@ const blogViewIpLimiter = rateLimit({
   skip: (req, res) => req.method === "OPTIONS",
 });
 
+// 문의는 DB에 10년 남는다. IP당 10분에 3건. 형식이 틀려 거절된 요청(4xx)은 세지 않는다.
+// 이메일을 잘못 적어 다시 보내는 사람이 한도에 걸리면 안 되기 때문이다.
+const inquiryLimiter = rateLimit({
+  windowMs: RATE_LIMIT.INQUIRY_WINDOW_MS,
+  limit: RATE_LIMIT.INQUIRY_MAX,
+  message: "문의는 10분에 3건까지 보낼 수 있습니다. 잠시 후 다시 시도해 주세요.",
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipFailedRequests: true,
+  skip: (req, res) => req.method === "OPTIONS",
+});
+
 module.exports = {
   createLimiter,
   generalLimiter,
   adminLoginLimiter,
   blogViewVisitorLimiter,
   blogViewIpLimiter,
+  inquiryLimiter,
 };
