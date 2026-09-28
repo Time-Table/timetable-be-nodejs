@@ -36,6 +36,13 @@ const eventSchema = new mongoose.Schema({
     enum: ["landing", "quick_create"],
     required: false,
   },
+  // 테이블 A/B(2026-09-29). 그 이벤트 때 보고 있던 표 화면. 실험이 켜진 뒤 표 이벤트에만 있다.
+  // table_view에는 없다(FE가 표 정보를 받기 전에 보낸다). 배정과 ui_switch로 되살린다.
+  uiVersion: {
+    type: String,
+    enum: ["A", "B"],
+    required: false,
+  },
   // 기존 이벤트의 미설정 값도 집계할 때는 unknown으로 취급한다.
   tableRole: {
     type: String,

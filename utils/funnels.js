@@ -21,6 +21,9 @@ const EVENTS = {
   JOIN_SUCCESS: "join_success",
   SCHEDULE_SAVE: "schedule_save",
   RANKING_OPEN: "ranking_open",
+
+  // 퍼널 단계가 아니라 테이블 A/B(2026-09-29)의 화면 전환 기록이다. 어느 퍼널에도 넣지 않는다.
+  UI_SWITCH: "ui_switch",
 };
 
 const EVENT_NAMES = Object.values(EVENTS);

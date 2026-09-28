@@ -6,7 +6,8 @@ const { TIMEZONE } = require("../utils/constants");
 const { EVENTS, EVENT_NAMES, FUNNELS, MATURITY_FUNNEL } = require("../utils/funnels");
 
 const TABLE_EVENTS = [EVENTS.CREATE_SUCCESS, EVENTS.INVITE_SHARE, EVENTS.TABLE_VIEW,
-  EVENTS.JOIN_SUBMIT, EVENTS.JOIN_SUCCESS, EVENTS.SCHEDULE_SAVE, EVENTS.RANKING_OPEN];
+  EVENTS.JOIN_SUBMIT, EVENTS.JOIN_SUCCESS, EVENTS.SCHEDULE_SAVE, EVENTS.RANKING_OPEN, EVENTS.UI_SWITCH];
+const UI_VERSIONS = ["A", "B"];
 
 const resolveTableRole = async (tableId, visitorId) => {
   if (!tableId) return "unknown";
@@ -23,13 +24,16 @@ const resolveTableRole = async (tableId, visitorId) => {
 const CREATION_EVENTS = [EVENTS.CREATE_VIEW, EVENTS.CREATE_CTA_CLICK, EVENTS.CREATE_SUBMIT, EVENTS.CREATE_SUCCESS];
 const CREATION_PATHS = ["landing", "quick_create"];
 
-const recordEvent = async ({ name, visitorId, tableId, source, device, creationPath }) => {
+const recordEvent = async ({ name, visitorId, tableId, source, device, creationPath, uiVersion }) => {
   // 정의되지 않은 이름은 저장하지 않는다. 오타나 외부 호출로 컬렉션이 오염되는 것을 막는다.
   if (!EVENT_NAMES.includes(name) || typeof visitorId !== "string" ||
     visitorId.length === 0 || visitorId.length > 64) return null;
 
   const validTableId = typeof tableId === "string" && tableId.length > 0 && tableId.length <= 64
     ? tableId : undefined;
+  // 테이블 A/B: 표 이벤트에서 A·B만 받는다. 전환 기록은 어느 표에서 어느 화면으로 바꿨는지 없으면 쓸모가 없어 버린다.
+  const validUiVersion = TABLE_EVENTS.includes(name) && UI_VERSIONS.includes(uiVersion) ? uiVersion : undefined;
+  if (name === EVENTS.UI_SWITCH && (!validTableId || !validUiVersion)) return null;
   const tableRole = TABLE_EVENTS.includes(name)
     ? await resolveTableRole(validTableId, visitorId) : undefined;
 
@@ -42,6 +46,7 @@ const recordEvent = async ({ name, visitorId, tableId, source, device, creationP
     device: ["mobile", "tablet", "desktop"].includes(device) ? device : undefined,
     // 생성 퍼널 이벤트에만 둔다. 다른 이벤트에 붙어 오거나 모르는 값이면 버린다.
     creationPath: CREATION_EVENTS.includes(name) && CREATION_PATHS.includes(creationPath) ? creationPath : undefined,
+    uiVersion: validUiVersion,
     date: moment().tz(TIMEZONE).format("YYYY-MM-DD"),
   });
 };

@@ -66,6 +66,7 @@ test("계측 코드가 참조하는 이벤트가 정의에 존재한다", () => 
     "join_success",
     "schedule_save",
     "ranking_open",
+    "ui_switch",
   ];
   required.forEach((name) => {
     assert.ok(EVENT_NAMES.includes(name), `프론트가 보내는 '${name}'가 백엔드 정의에 없습니다`);
