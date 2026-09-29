@@ -1,4 +1,5 @@
 const visitService = require("../services/visitService");
+const { isBotUserAgent } = require("../utils/botFilter");
 
 const trackVisit = async (req, res) => {
   const { page } = req.body;
@@ -10,6 +11,11 @@ const trackVisit = async (req, res) => {
       skipped: true,
       message: "관리자 방문은 집계에서 제외됩니다.",
     });
+  }
+
+  // 스스로 봇이라고 밝히는 요청(구글봇·헤드리스 브라우저 등)도 세지 않는다. 응답은 똑같이 바로 200(2026-09-29).
+  if (isBotUserAgent(req.get("User-Agent"))) {
+    return res.status(200).json({ success: true, skipped: true });
   }
 
   const updateFields = {};
