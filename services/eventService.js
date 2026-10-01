@@ -9,7 +9,7 @@ const { EVENTS, EVENT_NAMES, FUNNELS, MATURITY_FUNNEL } = require("../utils/funn
 const TABLE_EVENTS = [EVENTS.CREATE_SUCCESS, EVENTS.INVITE_SHARE, EVENTS.TABLE_VIEW,
   EVENTS.JOIN_SUBMIT, EVENTS.JOIN_SUCCESS, EVENTS.SCHEDULE_SAVE, EVENTS.RANKING_OPEN, EVENTS.UI_SWITCH,
   EVENTS.UI_VIEW, EVENTS.AB_STATE_FAIL, EVENTS.JOIN_FAIL, EVENTS.SAVE_FAIL,
-  EVENTS.UI_LOAD_FAIL];
+  EVENTS.UI_LOAD_FAIL, EVENTS.UI_VOTE];
 // 만든 사람·참여자 구분은 원래 표 이벤트에만 붙인다(2회차 기록은 자주 와서 조회를 늘리지 않는다).
 const ROLE_EVENTS = [EVENTS.CREATE_SUCCESS, EVENTS.INVITE_SHARE, EVENTS.TABLE_VIEW,
   EVENTS.JOIN_SUBMIT, EVENTS.JOIN_SUCCESS, EVENTS.SCHEDULE_SAVE, EVENTS.RANKING_OPEN, EVENTS.UI_SWITCH];
@@ -25,6 +25,8 @@ const AB_RULES = {
   [EVENTS.JOIN_FAIL]: { needsUi: true, reasons: ["invalid_input", "wrong_password", "rate_limited", "network", "server"] },
   [EVENTS.SAVE_FAIL]: { needsUi: true, reasons: ["network", "server", "rejected"] },
   [EVENTS.UI_LOAD_FAIL]: { needsUi: true, reasons: ["chunk_retry", "chunk_failed"] },
+  // 띠 하트 투표(2026-10-02 사람 결정): 지금 보는 화면(uiVersion)에 투표하거나(vote) 그 투표를 취소(cancel). 사람당 한 표.
+  [EVENTS.UI_VOTE]: { needsUi: true, reasons: ["vote", "cancel"] },
 };
 const ID_PATTERN = /^[A-Za-z0-9-]{1,40}$/;
 const cleanId = (value) => (typeof value === "string" && ID_PATTERN.test(value) ? value : undefined);

@@ -18,7 +18,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const SRM_ALPHA = 0.01;
 const AMBIGUOUS_MS = 30 * 1000;
 const EVENT_NAMES = ["ui_view", "ui_switch", "ab_state_fail", "join_submit", "join_success",
-  "join_fail", "schedule_save", "save_fail", "ui_load_fail"];
+  "join_fail", "schedule_save", "save_fail", "ui_load_fail", "ui_vote"];
 // 판정 문턱은 [시작] 전에 사람이 정한다(specs/table-ab-2.md). 정하기 전에는 판정하지 않는다.
 const RULE = { srmAlpha: SRM_ALPHA, minTriedPerArm: null };
 
@@ -169,7 +169,7 @@ const getReport = async (now = new Date()) => {
   const visitors = new Map();
   const visitorOf = (id) => {
     if (!visitors.has(id)) {
-      visitors.set(id, { id, assigned: tableUiFor(id), views: [], marks: [], stateFail: false });
+      visitors.set(id, { id, assigned: tableUiFor(id), views: [], marks: [], votes: [], stateFail: false });
     }
     return visitors.get(id);
   };
@@ -177,6 +177,10 @@ const getReport = async (now = new Date()) => {
     if (typeof e.visitorId !== "string" || !e.visitorId) continue;
     const v = visitorOf(e.visitorId);
     if (e.name === "ab_state_fail") v.stateFail = true;
+    if (e.name === "ui_vote" && e.uiVersion) {
+      // 투표 기록: 마지막 것이 지금 표다(취소면 표 없음). 순서는 화면 선택과 같은 규칙(finalOf).
+      v.votes.push({ ui: e.reason === "cancel" ? "none" : e.uiVersion, tabId: e.tabId, seq: e.seq, at: +e.createdAt });
+    }
     if ((e.name === "ui_view" || e.name === "ui_switch") && e.uiVersion) {
       const mark = { tableId: e.tableId, ui: e.uiVersion, tabId: e.tabId, seq: e.seq, at: +e.createdAt };
       v.marks.push(mark);
@@ -299,6 +303,18 @@ const getReport = async (now = new Date()) => {
     failed: bFailed.size, failedRate: ratio(bFailed.size, bTried.size),
   };
 
+  // 띠 하트 투표(보조, 2026-10-02 사람 지시 "단순 투표 수 양만"): 브라우저마다 집계 끝 기준 마지막 표.
+  // 취소했거나 순서 불명이면 표 없음. 투표율 = 표가 있는 브라우저 / 화면을 본 브라우저. 판정에는 쓰지 않는다.
+  const votes = { A: 0, B: 0, voters: 0, exposed: rows.length, rate: null };
+  for (const v of visitors.values()) {
+    if (!v.votes.length) continue;
+    const last = finalOf(v.votes);
+    if (!last || last.ambiguous || (last.ui !== "A" && last.ui !== "B")) continue;
+    votes.voters += 1;
+    votes[last.ui] += 1;
+  }
+  votes.rate = ratio(votes.voters, votes.exposed);
+
   return {
     experiment,
     assignment: { A: exposed.A, B: exposed.B, srmPValue: srm === null ? null : Math.round(srm * 10000) / 10000, stateFailOnly },
@@ -306,6 +322,7 @@ const getReport = async (now = new Date()) => {
     preference: { conditional: preference, allTables, triedShare, byHistory },
     failures,
     joins,
+    votes,
     verdict: verdictOf({ srm, preference }),
   };
 };

@@ -31,6 +31,7 @@ const EVENTS = {
   JOIN_FAIL: "join_fail",
   SAVE_FAIL: "save_fail",
   UI_LOAD_FAIL: "ui_load_fail", // 새 화면 조각을 못 받음
+  UI_VOTE: "ui_vote", // 띠 하트 투표(2026-10-02). uiVersion = 투표한 화면, reason = vote|cancel
 };
 
 const EVENT_NAMES = Object.values(EVENTS);

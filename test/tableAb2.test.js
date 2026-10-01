@@ -291,3 +291,47 @@ test("중단한 실험은 중단 시각까지 마감된 표만 대상이라, 중
   }
   assert.deepEqual(muchLater.preference.allTables, rightAfter.preference.allTables);
 });
+
+test("하트 투표: 지금 화면에 vote·cancel만 저장하고, 결과는 브라우저마다 마지막 표의 수와 투표율", async (t) => {
+  t.mock.method(Event, "create", async (data) => data);
+  const base = { visitorId: "v", tableId: "t", tabId: "tab-1", seq: 1 };
+  assert.equal((await recordEvent({ name: "ui_vote", ...base, uiVersion: "B", reason: "vote", source: "x" })).reason, "vote");
+  assert.equal((await recordEvent({ name: "ui_vote", ...base, uiVersion: "B", reason: "vote", source: "x" })).source, undefined);
+  assert.equal((await recordEvent({ name: "ui_vote", ...base, uiVersion: "A", reason: "cancel" })).reason, "cancel");
+  assert.equal(await recordEvent({ name: "ui_vote", ...base, uiVersion: "A", reason: "좋아요" }), null, "정해진 이유만");
+  assert.equal(await recordEvent({ name: "ui_vote", ...base, reason: "vote" }), null, "화면 없으면 버림");
+  t.mock.restoreAll();
+
+  const startedAt = new Date("2026-10-10T00:00:00Z");
+  fakeExperiment(t, { key: "table-ab-2", startedAt });
+  const at = (h) => new Date(+startedAt + h * 3600 * 1000);
+  const ev = (name, visitorId, h, extra = {}) => ({ name, visitorId, tableId: "T1", createdAt: at(h), ...extra });
+  const V_C = "33333333-3333-4333-8333-333333333333"; // 배정 A
+  const V_D = "55555555-5555-4555-8555-555555555555"; // 배정 B
+  const events = [
+    // V_A(A): A에 투표 → 바꿔서 B에 투표(옮김) → 마지막 표 B, 교체함
+    ev("ui_view", V_A, 1, { uiVersion: "A", tabId: "x", seq: 1 }),
+    ev("ui_vote", V_A, 1.1, { uiVersion: "A", reason: "vote", tabId: "x", seq: 2 }),
+    ev("ui_switch", V_A, 1.2, { uiVersion: "B", tabId: "x", seq: 3 }),
+    ev("ui_view", V_A, 1.2, { uiVersion: "B", tabId: "x", seq: 4 }),
+    ev("ui_vote", V_A, 1.3, { uiVersion: "B", reason: "vote", tabId: "x", seq: 5 }),
+    // V_B(B): B에 투표, 교체 안 함
+    ev("ui_view", V_B, 2, { uiVersion: "B", tabId: "y", seq: 1 }),
+    ev("ui_vote", V_B, 2.1, { uiVersion: "B", reason: "vote", tabId: "y", seq: 2 }),
+    // V_C(A): 투표했다 취소 → 표 없음
+    ev("ui_view", V_C, 3, { uiVersion: "A", tabId: "w", seq: 1 }),
+    ev("ui_vote", V_C, 3.1, { uiVersion: "A", reason: "vote", tabId: "w", seq: 2 }),
+    ev("ui_vote", V_C, 3.2, { uiVersion: "A", reason: "cancel", tabId: "w", seq: 3 }),
+    // V_D(B): 투표 안 함
+    ev("ui_view", V_D, 4, { uiVersion: "B", tabId: "v", seq: 1 }),
+  ];
+  t.mock.method(Event, "find", () => chain(events, ["select", "sort", "maxTimeMS"]));
+  t.mock.method(Event, "distinct", () => ({ maxTimeMS: async () => [] }));
+  t.mock.method(Table, "find", () => chain([], ["select", "maxTimeMS"]));
+  t.mock.method(User, "aggregate", () => ({ option: async () => [] }));
+  t.mock.method(TableActivation, "find", () => chain([], ["select", "maxTimeMS"]));
+
+  const { votes } = await getReport(new Date("2026-10-11T00:00:00Z"));
+  // 표: V_A 새 화면, V_B 새 화면(V_C는 취소, V_D는 안 함). 화면을 본 브라우저 4 중 2 → 50%.
+  assert.deepEqual(votes, { A: 0, B: 2, voters: 2, exposed: 4, rate: 50 });
+});
