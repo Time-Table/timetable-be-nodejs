@@ -67,4 +67,5 @@ const getReport = async (days = 0, asOf = new Date()) => {
   };
 };
 
-module.exports = { getReport };
+// deadlineFor는 랜딩 A/B 결과(experimentService)도 같은 마감 규칙으로 쓴다.
+module.exports = { getReport, deadlineFor };

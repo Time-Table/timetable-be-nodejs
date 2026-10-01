@@ -3,12 +3,13 @@ const Sentry = require("@sentry/node");
 const activationReportService = require("../services/activationReportService");
 const participationReportService = require("../services/participationReportService");
 const { runTelemetry } = require("../utils/telemetry");
+const { isBotUserAgent } = require("../utils/botFilter");
 
 const trackEvent = async (req, res) => {
   const { name, visitorId, tableId, source, device, creationPath, uiVersion } = req.body;
 
-  // 관리자 브라우저의 행동은 퍼널 집계에서 제외한다.
-  if (req.isAdmin) {
+  // 관리자 브라우저의 행동은 퍼널 집계에서 제외한다. 스스로 봇이라고 밝히는 요청도 같게 다룬다(2026-09-29).
+  if (req.isAdmin || isBotUserAgent(req.get("User-Agent"))) {
     return res.status(200).json({ success: true, skipped: true });
   }
 
