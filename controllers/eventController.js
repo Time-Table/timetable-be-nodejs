@@ -5,8 +5,23 @@ const participationReportService = require("../services/participationReportServi
 const { runTelemetry } = require("../utils/telemetry");
 const { isBotUserAgent } = require("../utils/botFilter");
 
+/**
+ * 페이지가 사라지는 중에 보내는 기록(표 화면 A/B 2회차 ui_load_fail의 chunk_retry)은 미리 묻기 없는 요청이라
+ * Content-Type이 text/plain이고 본문은 JSON 문자열이다(eventRoutes가 8KB까지 읽는다). 못 읽으면 빈 기록으로 본다.
+ */
+const bodyOf = (req) => {
+  if (typeof req.body !== "string") return req.body || {};
+  try {
+    const parsed = JSON.parse(req.body);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 const trackEvent = async (req, res) => {
-  const { name, visitorId, tableId, source, device, creationPath, uiVersion } = req.body;
+  const { name, visitorId, tableId, source, device, creationPath, uiVersion,
+    viewId, tabId, seq, reason, joinType } = bodyOf(req);
 
   // 관리자 브라우저의 행동은 퍼널 집계에서 제외한다. 스스로 봇이라고 밝히는 요청도 같게 다룬다(2026-09-29).
   if (req.isAdmin || isBotUserAgent(req.get("User-Agent"))) {
@@ -14,7 +29,8 @@ const trackEvent = async (req, res) => {
   }
 
   try {
-    const event = await eventService.recordEvent({ name, visitorId, tableId, source, device, creationPath, uiVersion });
+    const event = await eventService.recordEvent({ name, visitorId, tableId, source, device, creationPath, uiVersion,
+      viewId, tabId, seq, reason, joinType });
     return res.status(200).json({
       success: true,
       ...(event?.tableRole ? { tableRole: event.tableRole } : {}),

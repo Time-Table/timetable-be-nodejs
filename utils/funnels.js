@@ -24,6 +24,13 @@ const EVENTS = {
 
   // 퍼널 단계가 아니라 테이블 A/B(2026-09-29)의 화면 전환 기록이다. 어느 퍼널에도 넣지 않는다.
   UI_SWITCH: "ui_switch",
+
+  // 표 화면 A/B 2회차(2026-10-01, 하네스 specs/table-ab-2.md). 퍼널 단계가 아니다.
+  UI_VIEW: "ui_view", // 화면이 그려짐(마감 때 유지한 화면 = 마감 전 마지막 ui_view)
+  AB_STATE_FAIL: "ab_state_fail", // 실험 상태를 못 받아 꺼짐으로 그림
+  JOIN_FAIL: "join_fail",
+  SAVE_FAIL: "save_fail",
+  UI_LOAD_FAIL: "ui_load_fail", // 새 화면 조각을 못 받음
 };
 
 const EVENT_NAMES = Object.values(EVENTS);

@@ -12,6 +12,7 @@ const eventRoutes = require("./eventRoutes");
 const adminRoutes = require("./adminRoutes");
 const blogViewRoutes = require("./blogViewRoutes");
 const inquiryRoutes = require("./inquiryRoutes");
+const experimentRoutes = require("./experimentRoutes");
 
 router.use(generalLimiter);
 router.use(detectAdminMode);
@@ -25,5 +26,6 @@ router.use("/events", eventRoutes);
 router.use("/admin", adminRoutes);
 router.use("/blog-views", blogViewRoutes);
 router.use("/inquiries", inquiryRoutes);
+router.use("/experiments", experimentRoutes);
 
 module.exports = router;

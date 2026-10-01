@@ -4,6 +4,7 @@ const adminController = require("../controllers/adminController");
 const analyticsController = require("../controllers/analyticsController");
 const inquiryController = require("../controllers/inquiryController");
 const experimentController = require("../controllers/experimentController");
+const tableAbController = require("../controllers/tableAbController");
 const { requireAdmin } = require("../middlewares/adminAuth");
 const { adminLoginLimiter } = require("../middlewares/rateLimiters");
 
@@ -23,5 +24,9 @@ router.delete("/inquiries/:inquiryId", inquiryController.deleteInquiry);
 // 랜딩 A/B 1회차 결과·중단(2026-09-29, 하네스 specs/landing-ab-manager.md)
 router.get("/experiments/landing-ab", experimentController.getLandingAb);
 router.post("/experiments/landing-ab/stop", experimentController.stopLandingAb);
+// 표 화면 A/B 2회차 결과·시작·중단(2026-10-01, 하네스 specs/table-ab-2.md)
+router.get("/experiments/table-ab", tableAbController.getReport);
+router.post("/experiments/table-ab/start", tableAbController.start);
+router.post("/experiments/table-ab/stop", tableAbController.stop);
 
 module.exports = router;

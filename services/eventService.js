@@ -5,9 +5,30 @@ const moment = require("moment-timezone");
 const { TIMEZONE } = require("../utils/constants");
 const { EVENTS, EVENT_NAMES, FUNNELS, MATURITY_FUNNEL } = require("../utils/funnels");
 
+// 표에서 일어난 이벤트. 그때 보던 화면(uiVersion A/B)을 둘 수 있다.
 const TABLE_EVENTS = [EVENTS.CREATE_SUCCESS, EVENTS.INVITE_SHARE, EVENTS.TABLE_VIEW,
+  EVENTS.JOIN_SUBMIT, EVENTS.JOIN_SUCCESS, EVENTS.SCHEDULE_SAVE, EVENTS.RANKING_OPEN, EVENTS.UI_SWITCH,
+  EVENTS.UI_VIEW, EVENTS.AB_STATE_FAIL, EVENTS.JOIN_FAIL, EVENTS.SAVE_FAIL,
+  EVENTS.UI_LOAD_FAIL];
+// 만든 사람·참여자 구분은 원래 표 이벤트에만 붙인다(2회차 기록은 자주 와서 조회를 늘리지 않는다).
+const ROLE_EVENTS = [EVENTS.CREATE_SUCCESS, EVENTS.INVITE_SHARE, EVENTS.TABLE_VIEW,
   EVENTS.JOIN_SUBMIT, EVENTS.JOIN_SUCCESS, EVENTS.SCHEDULE_SAVE, EVENTS.RANKING_OPEN, EVENTS.UI_SWITCH];
 const UI_VERSIONS = ["A", "B"];
+
+/**
+ * 표 화면 A/B 2회차(2026-10-01, 하네스 specs/table-ab-2.md) 기록. 정해진 필드만 받고, 자유 문자열(source)은 버린다.
+ * needsUi: 그때 화면(A/B)이 있어야 저장. needsView: 화면 구간 ID가 있어야 저장. reasons: 이유 값(없으면 이유를 받지 않음).
+ */
+const AB_RULES = {
+  [EVENTS.UI_VIEW]: { needsUi: true, needsView: true },
+  [EVENTS.AB_STATE_FAIL]: { reasons: ["timeout", "error"] },
+  [EVENTS.JOIN_FAIL]: { needsUi: true, reasons: ["invalid_input", "wrong_password", "rate_limited", "network", "server"] },
+  [EVENTS.SAVE_FAIL]: { needsUi: true, reasons: ["network", "server", "rejected"] },
+  [EVENTS.UI_LOAD_FAIL]: { needsUi: true, reasons: ["chunk_retry", "chunk_failed"] },
+};
+const ID_PATTERN = /^[A-Za-z0-9-]{1,40}$/;
+const cleanId = (value) => (typeof value === "string" && ID_PATTERN.test(value) ? value : undefined);
+const cleanInt = (value, max) => (Number.isInteger(value) && value >= 0 && value <= max ? value : undefined);
 
 const resolveTableRole = async (tableId, visitorId) => {
   if (!tableId) return "unknown";
@@ -24,7 +45,8 @@ const resolveTableRole = async (tableId, visitorId) => {
 const CREATION_EVENTS = [EVENTS.CREATE_VIEW, EVENTS.CREATE_CTA_CLICK, EVENTS.CREATE_SUBMIT, EVENTS.CREATE_SUCCESS];
 const CREATION_PATHS = ["landing", "quick_create"];
 
-const recordEvent = async ({ name, visitorId, tableId, source, device, creationPath, uiVersion }) => {
+const recordEvent = async ({ name, visitorId, tableId, source, device, creationPath, uiVersion,
+  viewId, tabId, seq, reason, joinType }) => {
   // 정의되지 않은 이름은 저장하지 않는다. 오타나 외부 호출로 컬렉션이 오염되는 것을 막는다.
   if (!EVENT_NAMES.includes(name) || typeof visitorId !== "string" ||
     visitorId.length === 0 || visitorId.length > 64) return null;
@@ -34,7 +56,20 @@ const recordEvent = async ({ name, visitorId, tableId, source, device, creationP
   // 테이블 A/B: 표 이벤트에서 A·B만 받는다. 전환 기록은 어느 표에서 어느 화면으로 바꿨는지 없으면 쓸모가 없어 버린다.
   const validUiVersion = TABLE_EVENTS.includes(name) && UI_VERSIONS.includes(uiVersion) ? uiVersion : undefined;
   if (name === EVENTS.UI_SWITCH && (!validTableId || !validUiVersion)) return null;
-  const tableRole = TABLE_EVENTS.includes(name)
+
+  // 2회차 기록: 표가 있어야 하고, 이름마다 정한 조건을 못 채우면 버린다.
+  const rule = AB_RULES[name];
+  const isAb = Boolean(rule) || name === EVENTS.UI_SWITCH;
+  const validViewId = isAb ? cleanId(viewId) : undefined;
+  const validReason = rule?.reasons?.includes(reason) ? reason : undefined;
+  if (rule) {
+    if (!validTableId) return null;
+    if (rule.needsUi && !validUiVersion) return null;
+    if (rule.needsView && !validViewId) return null;
+    if (rule.reasons && !validReason) return null;
+  }
+
+  const tableRole = ROLE_EVENTS.includes(name)
     ? await resolveTableRole(validTableId, visitorId) : undefined;
 
   return await Event.create({
@@ -42,11 +77,17 @@ const recordEvent = async ({ name, visitorId, tableId, source, device, creationP
     visitorId,
     tableId: validTableId,
     tableRole,
-    source: typeof source === "string" ? source.slice(0, 100) : undefined,
+    // 2회차 기록에는 자유 문자열을 두지 않는다(사생활, Codex 2026-10-01).
+    source: !rule && typeof source === "string" ? source.slice(0, 100) : undefined,
     device: ["mobile", "tablet", "desktop"].includes(device) ? device : undefined,
     // 생성 퍼널 이벤트에만 둔다. 다른 이벤트에 붙어 오거나 모르는 값이면 버린다.
     creationPath: CREATION_EVENTS.includes(name) && CREATION_PATHS.includes(creationPath) ? creationPath : undefined,
     uiVersion: validUiVersion,
+    viewId: validViewId,
+    tabId: isAb ? cleanId(tabId) : undefined,
+    seq: isAb ? cleanInt(seq, 1e6) : undefined,
+    reason: validReason,
+    joinType: name === EVENTS.JOIN_SUCCESS && ["new", "returning"].includes(joinType) ? joinType : undefined,
     date: moment().tz(TIMEZONE).format("YYYY-MM-DD"),
   });
 };

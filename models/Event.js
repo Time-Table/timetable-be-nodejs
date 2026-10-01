@@ -43,6 +43,14 @@ const eventSchema = new mongoose.Schema({
     enum: ["A", "B"],
     required: false,
   },
+  // 표 화면 A/B 2회차(2026-10-01). 화면 구간 ID, 탭 ID, 그 탭의 순번.
+  viewId: { type: String, required: false },
+  tabId: { type: String, required: false },
+  seq: { type: Number, required: false },
+  // 실패·상태 기록의 정해진 이유 값(eventService가 이름별로 허용한 값만 저장한다).
+  reason: { type: String, required: false },
+  // join_success: 새 참여(201)인지 다시 들어옴(200)인지.
+  joinType: { type: String, enum: ["new", "returning"], required: false },
   // 기존 이벤트의 미설정 값도 집계할 때는 unknown으로 취급한다.
   tableRole: {
     type: String,
