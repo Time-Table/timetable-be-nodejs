@@ -33,47 +33,83 @@ const sumSeries = (series, key) => series.reduce((acc, row) => acc + row[key], 0
 /**
  * 일별 추이와 직전 동일 기간 대비 증감.
  * 데이터가 없는 날은 0으로 채워야 선 그래프가 실제 모양을 보여준다.
+ *
+ * 사람 수 지표(2026-10-04 사람 지시: "페이지 방문"은 연 횟수라 사람 수가 아님): 퍼널 이벤트의 (날짜, visitorId) 쌍으로
+ * - visitors: 기간 안에 기록을 남긴 서로 다른 브라우저 수(랜딩 신뢰 표시의 방문자 정의와 같다)
+ * - visitDays: 브라우저×날짜 쌍 수(같은 브라우저가 다른 날 다시 오면 +1, 같은 날 새로고침은 0)
+ * 를 더한다. 기존 visits(페이지 연 횟수 합)는 그대로 둔다. 이벤트는 180일 뒤 지워지고 2026-08-01부터 쌓였으므로
+ * eventsSince(첫 기록 날짜)를 함께 돌려줘 직전 기간 비교가 기록 시작 전을 포함하는지 화면이 알린다.
  */
-const getTrends = async (days) => {
-  const today = moment().tz(TIMEZONE);
-  const span = days > 0 ? days : 30;
+const TREND_KEYS = ["visitors", "visitDays", "visits", "tables", "signUps", "logins"];
 
-  const currentStart = dayString(moment(today).subtract(span - 1, "days"));
-  const previousStart = dayString(moment(today).subtract(span * 2 - 1, "days"));
-  const previousEnd = dayString(moment(today).subtract(span, "days"));
+const periodChange = (now, before) => ({
+  total: now,
+  previousTotal: before,
+  // 직전 기간이 0이면 증가율은 정의되지 않는다. null로 두고 UI에서 "—"로 표시한다.
+  changePercent: before > 0 ? Number((((now - before) / before) * 100).toFixed(1)) : null,
+  changeAbsolute: now - before,
+});
 
-  const docs = await Visiter.find({ date: { $gte: previousStart } }).lean();
-  const byDate = new Map(docs.map((d) => [d.date, d]));
+/**
+ * 순수 조립. today·날짜는 YYYY-MM-DD(KST). visiterDocs는 날짜별 카운터, pairs는 서로 다른 (date, visitorId) 쌍 목록.
+ */
+const assembleTrends = ({ today, span, visiterDocs, pairs, eventsSince }) => {
+  const currentStart = dayString(moment.tz(today, TIMEZONE).subtract(span - 1, "days"));
+  const previousStart = dayString(moment.tz(today, TIMEZONE).subtract(span * 2 - 1, "days"));
+  const previousEnd = dayString(moment.tz(today, TIMEZONE).subtract(span, "days"));
+
+  const byDate = new Map(visiterDocs.map((d) => [d.date, d]));
+  const visitorsByDate = new Map();
+  pairs.forEach(({ date, visitorId }) => {
+    if (!visitorsByDate.has(date)) visitorsByDate.set(date, new Set());
+    visitorsByDate.get(date).add(visitorId);
+  });
 
   const toSeries = (dates) =>
     dates.map((date) => {
       const doc = byDate.get(date);
       return {
         date,
+        visitors: visitorsByDate.get(date)?.size || 0,
         visits: visitTotal(doc),
         tables: doc?.todayTableCreateCount || 0,
         signUps: doc?.todaySignUp || 0,
         logins: doc?.todayLogin || 0,
       };
     });
-
-  const current = toSeries(dateRange(currentStart, dayString(today)));
+  const current = toSeries(dateRange(currentStart, today));
   const previous = toSeries(dateRange(previousStart, previousEnd));
 
-  const metrics = ["visits", "tables", "signUps", "logins"].map((key) => {
-    const now = sumSeries(current, key);
-    const before = sumSeries(previous, key);
-    return {
-      key,
-      total: now,
-      previousTotal: before,
-      // 직전 기간이 0이면 증가율은 정의되지 않는다. null로 두고 UI에서 "—"로 표시한다.
-      changePercent: before > 0 ? Number((((now - before) / before) * 100).toFixed(1)) : null,
-      changeAbsolute: now - before,
-    };
+  // 기간 전체의 서로 다른 브라우저 수는 날짜별 합이 아니라 기간 안 쌍에서 따로 센다(여러 날 온 사람을 한 번만).
+  const uniqueIn = (start, end) =>
+    new Set(pairs.filter((p) => p.date >= start && p.date <= end).map((p) => p.visitorId)).size;
+
+  const metrics = TREND_KEYS.map((key) => {
+    if (key === "visitors") return { key, ...periodChange(uniqueIn(currentStart, today), uniqueIn(previousStart, previousEnd)) };
+    if (key === "visitDays") return { key, ...periodChange(sumSeries(current, "visitors"), sumSeries(previous, "visitors")) };
+    return { key, ...periodChange(sumSeries(current, key), sumSeries(previous, key)) };
   });
 
-  return { days: span, startDate: currentStart, series: current, metrics };
+  return { days: span, startDate: currentStart, previousStart, eventsSince: eventsSince || null, series: current, metrics };
+};
+
+const getTrends = async (days) => {
+  const today = dayString(moment().tz(TIMEZONE));
+  const span = days > 0 ? days : 30;
+  const previousStart = dayString(moment.tz(today, TIMEZONE).subtract(span * 2 - 1, "days"));
+
+  const [visiterDocs, pairs, firstEvent] = await Promise.all([
+    Visiter.find({ date: { $gte: previousStart } }).lean(),
+    // (날짜, 브라우저) 쌍으로 묶어 같은 날 같은 브라우저의 여러 이벤트를 하나로 센다. {date, visitorId} 인덱스를 탄다.
+    Event.aggregate([
+      { $match: { date: { $gte: previousStart } } },
+      { $group: { _id: { date: "$date", visitorId: "$visitorId" } } },
+      { $project: { _id: 0, date: "$_id.date", visitorId: "$_id.visitorId" } },
+    ]),
+    Event.findOne().sort({ date: 1 }).select("date -_id").lean(),
+  ]);
+
+  return assembleTrends({ today, span, visiterDocs, pairs, eventsSince: firstEvent?.date || null });
 };
 
 /**
@@ -211,4 +247,4 @@ const getTableDetail = async (tableId) => {
   };
 };
 
-module.exports = { getTrends, getAudience, getChatFeed, getTableDetail };
+module.exports = { getTrends, assembleTrends, getAudience, getChatFeed, getTableDetail };
