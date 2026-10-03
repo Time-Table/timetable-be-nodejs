@@ -55,3 +55,24 @@ test("달·해 경계를 날짜로 센다", () => {
   assert.equal(result.previousStart, "2026-12-29");
   assert.equal(metric(result, "visitors").total, 1);
 });
+
+test("getTrends는 직전 기간 시작일부터 카운터와 (날짜, 브라우저) 쌍을 읽어 조립한다", async (t) => {
+  const Visiter = require("../models/Visiter");
+  const Event = require("../models/Event");
+  const { getTrends } = require("../services/analyticsService");
+  const find = t.mock.method(Visiter, "find", () => ({ lean: async () => [{ date: new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }), todayVisitLandingPage: 7 }] }));
+  const aggregate = t.mock.method(Event, "aggregate", async () => [{ date: "2026-01-01", visitorId: "old" }]);
+  const findOne = t.mock.method(Event, "findOne", () => ({ sort: () => ({ select: () => ({ lean: async () => ({ date: "2026-08-01" }) }) }) }));
+
+  const result = await getTrends(7);
+  assert.equal(result.days, 7);
+  assert.equal(result.eventsSince, "2026-08-01");
+  // 직전 기간 시작일(오늘 포함 14일 전)부터 읽는다.
+  assert.deepEqual(find.mock.calls[0].arguments[0], { date: { $gte: result.previousStart } });
+  const pipeline = aggregate.mock.calls[0].arguments[0];
+  assert.deepEqual(pipeline[0], { $match: { date: { $gte: result.previousStart } } });
+  assert.deepEqual(pipeline[1], { $group: { _id: { date: "$date", visitorId: "$visitorId" } } });
+  assert.equal(findOne.mock.callCount(), 1);
+  assert.equal(result.series[result.series.length - 1].visits, 7);
+  assert.equal(result.metrics.find((m) => m.key === "visitors").total, 0, "기간 밖 쌍은 세지 않는다");
+});
