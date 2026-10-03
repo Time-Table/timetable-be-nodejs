@@ -50,6 +50,7 @@ const PROTECTED = [
 const PUBLIC = [
   { method: "POST", path: "/api/visits", why: "익명 방문 집계", body: { page: "landing" } },
   { method: "GET", path: "/api/experiments/table-ab", why: "표 화면 A/B 켜짐 여부(키·상태·시각만, 개인 정보 없음)" },
+  { method: "GET", path: "/api/stats/landing", why: "랜딩 신뢰 표시용 어제까지 30일 참여 등록 건수(합계 하나, 개인 정보 없음)" },
   {
     method: "POST",
     path: "/api/events",
