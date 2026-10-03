@@ -61,10 +61,11 @@ test("GET /api/stats/landing은 공개이고 {success, data}와 한 시간 캐�
     assert.equal(res.status, 200);
     assert.equal(res.headers.get("cache-control"), "public, max-age=3600");
     const body = await res.json();
+    // 응답 모양을 통째로 고정한다. 개인 정보가 들어갈 자리가 없다(합계 하나와 날짜뿐).
+    assert.deepEqual(Object.keys(body).sort(), ["data", "success"]);
     assert.equal(body.success, true);
-    assert.equal(body.data.count, 223);
-    assert.equal(body.data.days, 30);
-    assert.match(body.data.asOf, /^\d{4}-\d{2}-\d{2}$/);
+    const { startDate, asOf } = service.windowEndingYesterday(new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Seoul" }));
+    assert.deepEqual(body.data, { startDate, asOf, days: 30, count: 223 });
   } finally {
     await close();
     service.resetCache();
